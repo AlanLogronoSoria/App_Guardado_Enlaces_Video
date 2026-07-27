@@ -39,6 +39,7 @@ class _AddLinkScreenState extends ConsumerState<AddLinkScreen> {
   @override
   void initState() {
     super.initState();
+    print('[ADD LINK] ======== initState ========');
     if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
       print('[ADD LINK] initialUrl recibido: ${widget.initialUrl}');
       _urlController.text = widget.initialUrl!;
@@ -48,13 +49,35 @@ class _AddLinkScreenState extends ConsumerState<AddLinkScreen> {
     } else {
       print('[ADD LINK] sin initialUrl — abriendo formulario vacío');
     }
+    print('[ADD LINK] ======== initState FIN ========');
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    print('[ADD LINK] didChangeDependencies');
+  }
+
+  @override
+  void didUpdateWidget(covariant AddLinkScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print('[ADD LINK] didUpdateWidget: initialUrl old=${oldWidget.initialUrl} new=${widget.initialUrl}');
+  }
+
+  @override
+  void deactivate() {
+    print('[ADD LINK] deactivate');
+    super.deactivate();
   }
 
   @override
   void dispose() {
+    print('[ADD LINK] ======== dispose ========');
+    print('[NAV STACK en dispose] ${StackTrace.current}');
     _urlController.dispose();
     _titleController.dispose();
     super.dispose();
+    print('[ADD LINK] ======== dispose FIN ========');
   }
 
   Future<void> _processUrl(String url) async {
@@ -193,11 +216,13 @@ class _AddLinkScreenState extends ConsumerState<AddLinkScreen> {
   }
 
   void _goHome() {
+    print('[ADD LINK] _goHome() → context.go(AppConfig.homeRoute)');
     context.go(AppConfig.homeRoute);
   }
 
   @override
   Widget build(BuildContext context) {
+    print('[ADD LINK] build');
     final colorScheme = Theme.of(context).colorScheme;
     final categoriesAsync = ref.watch(allCategoriesProvider);
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'core/config/app_config.dart';
@@ -15,7 +16,6 @@ import 'shared/providers/category_providers.dart';
 enum SaveMode { confirmation, fast, auto }
 
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
-final shareUrlProvider = StateProvider<String?>((ref) => null);
 final saveModeProvider = StateProvider<SaveMode>((ref) => SaveMode.confirmation);
 
 void main() async {
@@ -42,7 +42,8 @@ class InventarioVideoApp extends ConsumerStatefulWidget {
 
 class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
   StreamSubscription<dynamic>? _shareSubscription;
-  bool _processingShare = false;
+  String? _lastSharedUrl;
+  DateTime _lastHandledAt = DateTime(2000);
 
   @override
   void initState() {
@@ -59,9 +60,20 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
 
   void _scheduleBackup() {
     Future.microtask(() {
-      final scheduler = ref.read(backupSchedulerProvider);
-      scheduler.tryScheduledBackup();
+      ref.read(backupSchedulerProvider).tryScheduledBackup();
     });
+  }
+
+  bool _shouldHandle(String url) {
+    final now = DateTime.now();
+    if (url == _lastSharedUrl &&
+        now.difference(_lastHandledAt).inSeconds < 5) {
+      debugPrint('[SHARE] ignorado: mismo URL en menos de 5s');
+      return false;
+    }
+    _lastSharedUrl = url;
+    _lastHandledAt = now;
+    return true;
   }
 
   void _handleShareIntent() {
@@ -69,112 +81,63 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
         .getInitialMedia()
         .then((List<SharedMediaFile> value) {
       debugPrint('[SHARE] getInitialMedia: ${value.length} items');
-      for (var i = 0; i < value.length; i++) {
-        debugPrint(
-            '[SHARE]   item[$i] path="${value[i].path}" type="${value[i].type}"');
-      }
       if (value.isNotEmpty) {
         final sharedText = value.map((f) => f.path).join(' ');
-        debugPrint('[SHARE] joined text: "$sharedText"');
-        _processIncomingText(sharedText);
+        _extractAndHandle(sharedText);
       }
-    });
 
-    _shareSubscription = ReceiveSharingIntent.instance
-        .getMediaStream()
-        .listen((List<SharedMediaFile> value) {
-      debugPrint('[SHARE] getMediaStream: ${value.length} items');
-      for (var i = 0; i < value.length; i++) {
-        debugPrint(
-            '[SHARE]   item[$i] path="${value[i].path}" type="${value[i].type}"');
-      }
-      if (value.isNotEmpty) {
-        final sharedText = value.map((f) => f.path).join(' ');
-        debugPrint('[SHARE] joined text: "$sharedText"');
-        _processIncomingText(sharedText);
-      }
+      _shareSubscription = ReceiveSharingIntent.instance
+          .getMediaStream()
+          .listen((List<SharedMediaFile> value) {
+        debugPrint('[SHARE] getMediaStream: ${value.length} items');
+        if (value.isNotEmpty) {
+          final sharedText = value.map((f) => f.path).join(' ');
+          _extractAndHandle(sharedText);
+        }
+      });
     });
   }
 
-  void _processIncomingText(String text) {
-    debugPrint('[SHARE] _processIncomingText input: "$text"');
-    String? extractedUrl;
+  void _extractAndHandle(String text) {
+    debugPrint('[SHARE] _extractAndHandle input: "$text"');
+    String? url;
     final uri = Uri.tryParse(text);
     if (uri != null &&
         uri.hasScheme &&
         (uri.scheme == 'http' || uri.scheme == 'https')) {
-      extractedUrl = text.trim();
-      debugPrint('[SHARE] URL directa detectada: $extractedUrl');
+      url = text.trim();
     } else if (text.contains('http')) {
       final match = RegExp(r'(https?://\S+)').firstMatch(text);
       if (match != null) {
-        extractedUrl = match.group(1)!.trim();
-        debugPrint('[SHARE] URL extraída por regex: $extractedUrl');
+        url = match.group(1)!.trim();
       }
     }
 
-    if (extractedUrl != null) {
-      debugPrint('[SHARE] → shareUrlProvider.state = $extractedUrl');
-      Future.microtask(() {
-        ref.read(shareUrlProvider.notifier).state = extractedUrl;
-        debugPrint('[SHARE] shareUrlProvider actualizado');
-      });
-    } else {
-      debugPrint('[SHARE] ERROR: no se pudo extraer URL');
+    if (url != null && _shouldHandle(url)) {
+      debugPrint('[SHARE] URL válida, procesando: $url');
+      final router = ref.read(routerProvider);
+      final mode = ref.read(saveModeProvider);
+
+      switch (mode) {
+        case SaveMode.confirmation:
+          router.push(
+              '${AppConfig.addLinkRoute}?url=${Uri.encodeComponent(url)}');
+          break;
+        case SaveMode.fast:
+          _handleFastMode(router, url);
+          break;
+        case SaveMode.auto:
+          _handleAutoMode(router, url);
+          break;
+      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final router = ref.read(routerProvider);
-    final themeMode = ref.watch(themeModeProvider);
-    final shareUrl = ref.watch(shareUrlProvider);
-
-    return MaterialApp.router(
-      title: AppConfig.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
-      routerConfig: router,
-      builder: (context, child) {
-        if (shareUrl != null && !_processingShare) {
-          _processingShare = true;
-          final url = shareUrl;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(shareUrlProvider.notifier).state = null;
-            _processingShare = false;
-            _handleShareByMode(context, url);
-          });
-        }
-        return child!;
-      },
-    );
-  }
-
-  void _handleShareByMode(BuildContext context, String url) {
-    final mode = ref.read(saveModeProvider);
-
-    switch (mode) {
-      case SaveMode.confirmation:
-        _navigateToAddLink(context, url);
-      case SaveMode.fast:
-        _handleFastMode(context, url);
-      case SaveMode.auto:
-        _handleAutoMode(context, url);
-    }
-  }
-
-  void _navigateToAddLink(BuildContext context, String url) {
-    debugPrint('[NAV] navegando a AddLinkScreen con URL: $url');
-    final router = ref.read(routerProvider);
-    router.push('${AppConfig.addLinkRoute}?url=${Uri.encodeComponent(url)}');
-  }
-
-  Future<void> _handleFastMode(BuildContext context, String url) async {
+  Future<void> _handleFastMode(GoRouter router, String url) async {
     final platform = PlatformDetector.detect(url);
     if (platform == PlatformType.unknown) {
-      _navigateToAddLink(context, url);
+      router.push(
+          '${AppConfig.addLinkRoute}?url=${Uri.encodeComponent(url)}');
       return;
     }
 
@@ -209,7 +172,6 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
         if (aiResult.category != null && aiResult.isHighConfidence) {
           category = aiResult.category!;
           await categoryRepo.ensureCategory(category);
-
           await linkRepo.saveLink(
             url: url, platform: platform.name,
             title: title, thumbnail: thumbnail, category: category,
@@ -217,21 +179,17 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
           );
           ref.invalidate(allLinksProvider);
           ref.invalidate(allCategoriesProvider);
-
-          if (context.mounted) {
-            _showSavedToast(context, category);
-          }
+          _showSavedToast('Guardado en $category');
           return;
         }
       } catch (_) {}
     }
 
-    if (context.mounted) {
-      _navigateToAddLink(context, url);
-    }
+    router.push(
+        '${AppConfig.addLinkRoute}?url=${Uri.encodeComponent(url)}');
   }
 
-  Future<void> _handleAutoMode(BuildContext context, String url) async {
+  Future<void> _handleAutoMode(GoRouter router, String url) async {
     final platform = PlatformDetector.detect(url);
     final platformName = platform.name;
 
@@ -252,24 +210,25 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
       );
       ref.invalidate(allLinksProvider);
       ref.invalidate(allCategoriesProvider);
-
-      if (context.mounted) {
-        _showSavedToast(context, AppConstants.defaultCategory);
-      }
+      _showSavedToast('Video guardado en ${AppConstants.defaultCategory}');
     } catch (_) {}
 
     _enrichInBackground(url, platform, title);
   }
 
-  void _showSavedToast(BuildContext context, String category) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Video guardado en $category'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  void _showSavedToast(String message) {
+    final context = rootNavigatorKey.currentContext;
+    if (context != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _enrichInBackground(
@@ -320,5 +279,20 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
       ref.invalidate(allLinksProvider);
       ref.invalidate(allCategoriesProvider);
     } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final router = ref.read(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
+
+    return MaterialApp.router(
+      title: AppConfig.appName,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
+      routerConfig: router,
+    );
   }
 }

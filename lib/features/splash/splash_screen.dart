@@ -19,6 +19,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
+    print('[SPLASH] initState');
 
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1200),
@@ -39,13 +40,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     Future.delayed(const Duration(milliseconds: 2200), () {
       if (mounted) {
-        context.go(AppConfig.homeRoute);
+        final isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
+        print('[SPLASH] timer fired, mounted=$mounted, isCurrent=$isCurrent');
+        if (isCurrent) {
+          print('[SPLASH] navigating to Home');
+          context.go(AppConfig.homeRoute);
+        } else {
+          print('[SPLASH] NOT navigating — route is not current');
+        }
       }
     });
   }
 
   @override
   void dispose() {
+    print('[SPLASH] dispose');
     _controller.dispose();
     super.dispose();
   }

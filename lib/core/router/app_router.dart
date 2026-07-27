@@ -13,13 +13,14 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/backups/backups_screen.dart';
 import '../../features/share_history/share_history_screen.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: AppConfig.splashRoute,
+    observers: [_NavLogger()],
     routes: [
       GoRoute(
         path: AppConfig.splashRoute,
@@ -65,7 +66,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '${AppConfig.linkDetailRoute}/:id',
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
           return CustomTransitionPage(
@@ -80,7 +81,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppConfig.addLinkRoute,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) {
           final url = state.uri.queryParameters['url'];
           return CustomTransitionPage(
@@ -104,7 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppConfig.backupsRoute,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) {
           return CustomTransitionPage(
             key: state.pageKey,
@@ -119,7 +120,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppConfig.shareHistoryRoute,
-        parentNavigatorKey: _rootNavigatorKey,
+        parentNavigatorKey: rootNavigatorKey,
         pageBuilder: (context, state) {
           return CustomTransitionPage(
             key: state.pageKey,
@@ -209,5 +210,34 @@ class MainShell extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _NavLogger extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    print('[NAV OBSERVER] didPush: '
+        '${previousRoute?.settings.name ?? "null"} → ${route.settings.name ?? route.runtimeType}');
+    print('[NAV STACK] ${StackTrace.current}');
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    print('[NAV OBSERVER] didPop: '
+        '${route.settings.name ?? route.runtimeType} → ${previousRoute?.settings.name ?? "null"}');
+    print('[NAV STACK] ${StackTrace.current}');
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    print('[NAV OBSERVER] didReplace: '
+        '${oldRoute?.settings.name ?? "null"} → ${newRoute?.settings.name ?? "null"}');
+    print('[NAV STACK] ${StackTrace.current}');
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    print('[NAV OBSERVER] didRemove: ${route.settings.name ?? route.runtimeType}');
+    print('[NAV STACK] ${StackTrace.current}');
   }
 }
