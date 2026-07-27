@@ -115,6 +115,15 @@ class $LinkTableTable extends LinkTable
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -127,6 +136,7 @@ class $LinkTableTable extends LinkTable
     notes,
     createdAt,
     updatedAt,
+    source,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -211,6 +221,12 @@ class $LinkTableTable extends LinkTable
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    }
     return context;
   }
 
@@ -260,6 +276,10 @@ class $LinkTableTable extends LinkTable
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      ),
     );
   }
 
@@ -280,6 +300,7 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? source;
   const LinkTableData({
     required this.id,
     required this.url,
@@ -291,6 +312,7 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
     this.notes,
     required this.createdAt,
     required this.updatedAt,
+    this.source,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -309,6 +331,9 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || source != null) {
+      map['source'] = Variable<String>(source);
+    }
     return map;
   }
 
@@ -328,6 +353,9 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
           : Value(notes),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      source: source == null && nullToAbsent
+          ? const Value.absent()
+          : Value(source),
     );
   }
 
@@ -347,6 +375,7 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
       notes: serializer.fromJson<String?>(json['notes']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      source: serializer.fromJson<String?>(json['source']),
     );
   }
   @override
@@ -363,6 +392,7 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
       'notes': serializer.toJson<String?>(notes),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'source': serializer.toJson<String?>(source),
     };
   }
 
@@ -377,6 +407,7 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
     Value<String?> notes = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<String?> source = const Value.absent(),
   }) => LinkTableData(
     id: id ?? this.id,
     url: url ?? this.url,
@@ -388,6 +419,7 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
     notes: notes.present ? notes.value : this.notes,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    source: source.present ? source.value : this.source,
   );
   LinkTableData copyWithCompanion(LinkTableCompanion data) {
     return LinkTableData(
@@ -401,6 +433,7 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
       notes: data.notes.present ? data.notes.value : this.notes,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      source: data.source.present ? data.source.value : this.source,
     );
   }
 
@@ -416,7 +449,8 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
           ..write('favorite: $favorite, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('source: $source')
           ..write(')'))
         .toString();
   }
@@ -433,6 +467,7 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
     notes,
     createdAt,
     updatedAt,
+    source,
   );
   @override
   bool operator ==(Object other) =>
@@ -447,7 +482,8 @@ class LinkTableData extends DataClass implements Insertable<LinkTableData> {
           other.favorite == this.favorite &&
           other.notes == this.notes &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.source == this.source);
 }
 
 class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
@@ -461,6 +497,7 @@ class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
   final Value<String?> notes;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<String?> source;
   final Value<int> rowid;
   const LinkTableCompanion({
     this.id = const Value.absent(),
@@ -473,6 +510,7 @@ class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
     this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.source = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LinkTableCompanion.insert({
@@ -486,6 +524,7 @@ class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
     this.notes = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.source = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        url = Value(url),
@@ -505,6 +544,7 @@ class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
     Expression<String>? notes,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<String>? source,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -518,6 +558,7 @@ class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
       if (notes != null) 'notes': notes,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (source != null) 'source': source,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -533,6 +574,7 @@ class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
     Value<String?>? notes,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<String?>? source,
     Value<int>? rowid,
   }) {
     return LinkTableCompanion(
@@ -546,6 +588,7 @@ class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      source: source ?? this.source,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -583,6 +626,9 @@ class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -602,6 +648,7 @@ class LinkTableCompanion extends UpdateCompanion<LinkTableData> {
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('source: $source, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1396,6 +1443,7 @@ typedef $$LinkTableTableCreateCompanionBuilder =
       Value<String?> notes,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<String?> source,
       Value<int> rowid,
     });
 typedef $$LinkTableTableUpdateCompanionBuilder =
@@ -1410,6 +1458,7 @@ typedef $$LinkTableTableUpdateCompanionBuilder =
       Value<String?> notes,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<String?> source,
       Value<int> rowid,
     });
 
@@ -1469,6 +1518,11 @@ class $$LinkTableTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1531,6 +1585,11 @@ class $$LinkTableTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LinkTableTableAnnotationComposer
@@ -1571,6 +1630,9 @@ class $$LinkTableTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
 }
 
 class $$LinkTableTableTableManager
@@ -1614,6 +1676,7 @@ class $$LinkTableTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> source = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LinkTableCompanion(
                 id: id,
@@ -1626,6 +1689,7 @@ class $$LinkTableTableTableManager
                 notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                source: source,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1640,6 +1704,7 @@ class $$LinkTableTableTableManager
                 Value<String?> notes = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<String?> source = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LinkTableCompanion.insert(
                 id: id,
@@ -1652,6 +1717,7 @@ class $$LinkTableTableTableManager
                 notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                source: source,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -187,7 +187,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     final link = filtered[index];
                     return LinkCard(
                       link: link,
-                      onTap: () => context.go(
+                      onTap: () => context.push(
                           '${AppConfig.linkDetailRoute}/${link.id}'),
                       onFavoriteToggle: () {
                         ref

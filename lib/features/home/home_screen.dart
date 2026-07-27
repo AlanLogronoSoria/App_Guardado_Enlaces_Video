@@ -227,7 +227,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             return LinkCard(
               link: link,
               onTap: () =>
-                  context.go('${AppConfig.linkDetailRoute}/${link.id}'),
+                  context.push('${AppConfig.linkDetailRoute}/${link.id}'),
               onFavoriteToggle: () {
                 ref.read(linkRepositoryProvider).toggleFavorite(link.id);
               },

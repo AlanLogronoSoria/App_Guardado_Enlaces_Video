@@ -11,6 +11,7 @@ class LinkTable extends Table {
   TextColumn get notes => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+  TextColumn get source => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

@@ -11,6 +11,7 @@ import '../../features/link_detail/link_detail_screen.dart';
 import '../../features/add_link/add_link_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/backups/backups_screen.dart';
+import '../../features/share_history/share_history_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -108,6 +109,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           return CustomTransitionPage(
             key: state.pageKey,
             child: const BackupsScreen(),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 200),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppConfig.shareHistoryRoute,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) {
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: const ShareHistoryScreen(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);

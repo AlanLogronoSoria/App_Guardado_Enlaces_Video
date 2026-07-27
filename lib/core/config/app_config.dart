@@ -18,4 +18,5 @@ class AppConfig {
   static const String linkDetailRoute = '/link-detail';
   static const String addLinkRoute = '/add-link';
   static const String backupsRoute = '/backups';
+  static const String shareHistoryRoute = '/share-history';
 }

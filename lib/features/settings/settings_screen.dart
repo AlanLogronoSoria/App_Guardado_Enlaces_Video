@@ -4,6 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/config/app_config.dart';
 import '../../main.dart';
 
+final _saveModeLabels = {
+  SaveMode.confirmation: 'Confirmación',
+  SaveMode.fast: 'Rápido',
+  SaveMode.auto: 'Automático',
+};
+
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -23,11 +29,24 @@ class SettingsScreen extends ConsumerWidget {
             context,
             title: 'Apariencia',
             children: [
-              ListTile(
-                leading: Icon(Icons.dark_mode_outlined,
-                    color: colorScheme.primary),
-                title: const Text('Modo oscuro'),
-                trailing: SegmentedButton<ThemeMode>(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.dark_mode_outlined,
+                        size: 24, color: colorScheme.primary),
+                    const SizedBox(width: 16),
+                    Text('Modo oscuro',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: SegmentedButton<ThemeMode>(
                   segments: const [
                     ButtonSegment(
                         value: ThemeMode.system,
@@ -58,6 +77,23 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           _buildSection(
             context,
+            title: 'Guardado',
+            children: [
+              ListTile(
+                leading: Icon(Icons.save_as_outlined,
+                    color: colorScheme.primary),
+                title: const Text('Modo al compartir'),
+                subtitle: Text(_saveModeLabels[
+                        ref.watch(saveModeProvider)] ??
+                    'Confirmación'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showSaveModePicker(context, ref),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildSection(
+            context,
             title: 'Aplicación',
             children: [
               ListTile(
@@ -81,6 +117,15 @@ class SettingsScreen extends ConsumerWidget {
                 subtitle: const Text('Gestionar respaldos'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.push(AppConfig.backupsRoute),
+              ),
+              ListTile(
+                leading: Icon(Icons.history,
+                    color: colorScheme.primary),
+                title: const Text('Historial de compartidos'),
+                subtitle: const Text('Enlaces guardados desde otras apps'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () =>
+                    context.push(AppConfig.shareHistoryRoute),
               ),
             ],
           ),
@@ -112,6 +157,40 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _showSaveModePicker(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Modo al compartir'),
+        children: SaveMode.values.map((mode) {
+          return RadioListTile<SaveMode>(
+            value: mode,
+            groupValue: ref.watch(saveModeProvider),
+            title: Text(_saveModeLabels[mode] ?? ''),
+            subtitle: Text(_saveModeDescription(mode)),
+            onChanged: (v) {
+              if (v != null) {
+                ref.read(saveModeProvider.notifier).state = v;
+                Navigator.pop(ctx);
+              }
+            },
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _saveModeDescription(SaveMode mode) {
+    switch (mode) {
+      case SaveMode.confirmation:
+        return 'Abre Quick Save para revisar antes de guardar.';
+      case SaveMode.fast:
+        return 'Guarda automáticamente si la IA está segura de la categoría.';
+      case SaveMode.auto:
+        return 'Guarda al instante. Sin pantallas. Solo una notificación.';
+    }
   }
 
   Widget _buildSection(

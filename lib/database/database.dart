@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTest(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -30,11 +30,21 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
                 'CREATE INDEX IF NOT EXISTS idx_link_favorite ON link_table (favorite)');
           }
+          if (from < 4) {
+            await customStatement(
+                'ALTER TABLE link_table ADD COLUMN source TEXT');
+          }
         },
       );
 
   Future<List<LinkTableData>> getAllLinks() =>
       (select(linkTable)..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+          .get();
+
+  Future<List<LinkTableData>> getShareLinks() =>
+      (select(linkTable)
+            ..where((t) => t.source.isNotNull())
+            ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
           .get();
 
   Future<List<LinkTableData>> getLinksByCategory(String category) =>

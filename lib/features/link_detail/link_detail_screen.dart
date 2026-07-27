@@ -339,9 +339,41 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
       children: [
         FilledButton.icon(
           onPressed: () async {
-            final uri = Uri.parse(link.url);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            final url = link.url;
+            if (url.isEmpty) {
+              _showLinkError(context,
+                  'No hay enlace para abrir.');
+              return;
+            }
+
+            final fixedUrl = url.startsWith('http://') ||
+                    url.startsWith('https://')
+                ? url
+                : 'https://$url';
+
+            Uri uri;
+            try {
+              uri = Uri.parse(fixedUrl);
+              if (!uri.hasScheme || uri.host.isEmpty) {
+                _showLinkError(context, 'El enlace no es válido.');
+                return;
+              }
+            } catch (_) {
+              _showLinkError(context, 'El enlace no es válido.');
+              return;
+            }
+
+            try {
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri,
+                    mode: LaunchMode.externalApplication);
+              } else {
+                _showLinkError(context,
+                    'No se pudo abrir el enlace.');
+              }
+            } catch (_) {
+              _showLinkError(context,
+                  'Error al intentar abrir el enlace.');
             }
           },
           icon: const Icon(Icons.open_in_new),
@@ -423,6 +455,18 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
     return PlatformType.values.firstWhere(
       (p) => p.name == name,
       orElse: () => PlatformType.unknown,
+    );
+  }
+
+  void _showLinkError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Theme.of(context).colorScheme.error,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 }

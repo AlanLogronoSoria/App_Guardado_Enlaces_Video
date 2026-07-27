@@ -9,6 +9,7 @@ class LinkModel {
   final String category;
   final bool favorite;
   final String? notes;
+  final String? source;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -21,6 +22,7 @@ class LinkModel {
     required this.category,
     this.favorite = false,
     this.notes,
+    this.source,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -34,6 +36,7 @@ class LinkModel {
     String? category,
     bool? favorite,
     String? notes,
+    String? source,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -46,6 +49,7 @@ class LinkModel {
       category: category ?? this.category,
       favorite: favorite ?? this.favorite,
       notes: notes ?? this.notes,
+      source: source ?? this.source,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -61,6 +65,7 @@ class LinkModel {
       'category': category,
       'favorite': favorite,
       'notes': notes,
+      'source': source,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -76,6 +81,7 @@ class LinkModel {
       category: map['category'] as String,
       favorite: map['favorite'] == 1 || map['favorite'] == true,
       notes: map['notes'] as String?,
+      source: map['source'] as String?,
       createdAt: _parseDate(map['created_at'] ?? map['createdAt']),
       updatedAt: _parseDate(map['updated_at'] ?? map['updatedAt']),
     );

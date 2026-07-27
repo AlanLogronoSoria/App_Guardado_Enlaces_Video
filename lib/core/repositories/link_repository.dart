@@ -32,6 +32,7 @@ class LinkRepository {
     String? thumbnail,
     required String category,
     String? notes,
+    String? source,
   }) async {
     final now = DateTime.now();
     final id = _uuid.v4();
@@ -45,6 +46,7 @@ class LinkRepository {
       category: Value(category),
       favorite: const Value(false),
       notes: Value.absentIfNull(notes),
+      source: Value.absentIfNull(source),
       createdAt: Value(now),
       updatedAt: Value(now),
     );
@@ -134,6 +136,11 @@ class LinkRepository {
     return _db.watchLinksByCategory(category).map(_toModels);
   }
 
+  Future<List<LinkModel>> getShareLinks() async {
+    final rows = await _db.getShareLinks();
+    return _toModels(rows);
+  }
+
   LinkModel _toModel(LinkTableData row) => LinkModel(
         id: row.id,
         url: row.url,
@@ -143,6 +150,7 @@ class LinkRepository {
         category: row.category,
         favorite: row.favorite,
         notes: row.notes,
+        source: row.source,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       );
