@@ -18,6 +18,94 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final Map<String, bool> _expandedCategories = {};
+  final Set<String> _selectedLinkIds = {};
+  bool _isSelectionMode = false;
+
+  void _enterSelectionMode(String linkId) {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedLinkIds.add(linkId);
+    });
+  }
+
+  void _toggleSelection(String linkId) {
+    setState(() {
+      if (_selectedLinkIds.contains(linkId)) {
+        _selectedLinkIds.remove(linkId);
+        if (_selectedLinkIds.isEmpty) {
+          _isSelectionMode = false;
+        }
+      } else {
+        _selectedLinkIds.add(linkId);
+      }
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedLinkIds.clear();
+    });
+  }
+
+  void _showMoveToCategorySheet() {
+    final categoriesAsync = ref.read(allCategoriesProvider);
+    final categories = categoriesAsync.valueOrNull ?? [];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withAlpha(60),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: Text(
+                  'Mover ${_selectedLinkIds.length} elemento(s) a:',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              ...categories.map((cat) => ListTile(
+                    leading: const Icon(Icons.folder_outlined),
+                    title: Text(cat.name),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _moveSelectedTo(cat.name);
+                    },
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _moveSelectedTo(String category) async {
+    final repo = ref.read(linkRepositoryProvider);
+    for (final id in _selectedLinkIds) {
+      await repo.updateLink(id, category: category);
+    }
+    ref.invalidate(allLinksProvider);
+    ref.invalidate(allCategoriesProvider);
+    _exitSelectionMode();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,23 +114,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Inventario Video'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_rounded),
-            onPressed: () => context.go(AppConfig.addLinkRoute),
-            tooltip: 'Agregar enlace',
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go(AppConfig.addLinkRoute),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Nuevo'),
-      ),
+      appBar: _isSelectionMode
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+              ),
+              title: Text('${_selectedLinkIds.length} seleccionados'),
+              actions: [
+                TextButton.icon(
+                  onPressed: _showMoveToCategorySheet,
+                  icon: const Icon(Icons.drive_file_move_outlined),
+                  label: const Text('Mover'),
+                ),
+              ],
+            )
+          : AppBar(
+              title: const Text('Inventario Video'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add_rounded),
+                  onPressed: () => context.go(AppConfig.addLinkRoute),
+                  tooltip: 'Agregar enlace',
+                ),
+              ],
+            ),
+      floatingActionButton: _isSelectionMode
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => context.go(AppConfig.addLinkRoute),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Nuevo'),
+            ),
       body: linksAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        loading: () =>
+            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         error: (error, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -130,17 +236,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       edgeOffset: 80,
       child: CustomScrollView(
         slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            sliver: SliverToBoxAdapter(
-              child: categoriesAsync.when(
-                loading: () => const SizedBox(height: 42),
-                error: (_, __) => const SizedBox(height: 42),
-                data: (categories) =>
-                    _buildCategoryChips(context, categories, groupedLinks),
+          if (!_isSelectionMode)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              sliver: SliverToBoxAdapter(
+                child: categoriesAsync.when(
+                  loading: () => const SizedBox(height: 42),
+                  error: (_, __) => const SizedBox(height: 42),
+                  data: (categories) =>
+                      _buildCategoryChips(context, categories, groupedLinks),
+                ),
               ),
             ),
-          ),
           for (final category in sortedCategories) ...[
             _buildCategoryHeader(context, category, groupedLinks[category]!),
             _buildCategoryGrid(context, category, groupedLinks[category]!),
@@ -151,7 +258,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryChips(BuildContext context, List<CategoryModel> categories,
+  Widget _buildCategoryChips(BuildContext context,
+      List<CategoryModel> categories,
       Map<String, List<LinkModel>> groupedLinks) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -191,7 +299,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildCategoryHeader(
       BuildContext context, String category, List<LinkModel> links) {
     final isExpanded = _expandedCategories[category] ?? true;
-    if (!isExpanded) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    if (!isExpanded) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
@@ -210,7 +320,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildCategoryGrid(
       BuildContext context, String category, List<LinkModel> links) {
     final isExpanded = _expandedCategories[category] ?? true;
-    if (!isExpanded) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    if (!isExpanded) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
 
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
@@ -226,11 +338,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             final link = links[index];
             return LinkCard(
               link: link,
-              onTap: () =>
-                  context.push('${AppConfig.linkDetailRoute}/${link.id}'),
-              onFavoriteToggle: () {
-                ref.read(linkRepositoryProvider).toggleFavorite(link.id);
-              },
+              isSelectionMode: _isSelectionMode,
+              isSelected: _selectedLinkIds.contains(link.id),
+              onTap: _isSelectionMode
+                  ? () => _toggleSelection(link.id)
+                  : () => context
+                      .push('${AppConfig.linkDetailRoute}/${link.id}'),
+              onFavoriteToggle: _isSelectionMode
+                  ? null
+                  : () {
+                      ref.read(linkRepositoryProvider).toggleFavorite(link.id);
+                    },
+              onLongPress: _isSelectionMode
+                  ? null
+                  : () => _enterSelectionMode(link.id),
             );
           },
           childCount: links.length,

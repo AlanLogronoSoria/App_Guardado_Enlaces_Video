@@ -268,6 +268,28 @@ class AppDatabase extends _$AppDatabase {
     print('[DB] ensureBackupStatus: OK');
   }
 
+  Future<void> initializeDefaultCategories() async {
+    final count = await getCategoryCount();
+    if (count > 0) return;
+
+    const defaults = [
+      'Fitness', 'Gaming', 'Programación', 'Skincare',
+      'Finanzas', 'Cocina', 'Educación',
+    ];
+
+    final now = DateTime.now();
+    for (final name in defaults) {
+      await into(categoryTable).insert(
+        CategoryTableCompanion(
+          id: Value(name.toLowerCase()),
+          name: Value(name),
+          createdAt: Value(now),
+        ),
+        mode: InsertMode.insertOrIgnore,
+      );
+    }
+  }
+
   Future<void> incrementModifications() async {
     final status = await getBackupStatus();
     if (status == null) return;

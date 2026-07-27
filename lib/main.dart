@@ -61,6 +61,7 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
   void _scheduleBackup() {
     Future.microtask(() {
       ref.read(backupSchedulerProvider).tryScheduledBackup();
+      ref.read(databaseProvider).initializeDefaultCategories();
     });
   }
 

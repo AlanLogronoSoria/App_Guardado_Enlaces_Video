@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -51,6 +53,45 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
       appBar: AppBar(
         title: const Text('Detalle'),
         actions: [
+          if (!_isEditing)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (v) {
+                if (linkAsync.valueOrNull == null) return;
+                final l = linkAsync.value!;
+                switch (v) {
+                  case 'share':
+                    Share.share('${l.title}\n${l.url}');
+                  case 'copy':
+                    Clipboard.setData(ClipboardData(text: l.url));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Enlace copiado'),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                }
+              },
+              itemBuilder: (ctx) => const [
+                PopupMenuItem(
+                    value: 'share',
+                    child: Row(children: [
+                      Icon(Icons.share, size: 18),
+                      SizedBox(width: 10),
+                      Text('Compartir'),
+                    ])),
+                PopupMenuItem(
+                    value: 'copy',
+                    child: Row(children: [
+                      Icon(Icons.copy, size: 18),
+                      SizedBox(width: 10),
+                      Text('Copiar enlace'),
+                    ])),
+              ],
+            ),
           IconButton(
             icon: Icon(_isEditing ? Icons.check : Icons.edit),
             onPressed: () => _toggleEdit(linkAsync.valueOrNull),
@@ -178,6 +219,8 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
                 child: GestureDetector(
                   onTap: () {
                     ref.read(linkRepositoryProvider).toggleFavorite(link.id);
+                    ref.invalidate(linkByIdProvider(widget.linkId));
+                    ref.invalidate(allLinksProvider);
                   },
                   child: Container(
                     width: 40,
@@ -411,6 +454,8 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
               category: _selectedCategory,
               notes: notes.isEmpty ? null : notes,
             );
+        ref.invalidate(linkByIdProvider(widget.linkId));
+        ref.invalidate(allLinksProvider);
       }
     }
 
