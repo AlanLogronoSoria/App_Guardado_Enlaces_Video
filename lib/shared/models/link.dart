@@ -1,0 +1,145 @@
+import 'dart:convert';
+
+class LinkModel {
+  final String id;
+  final String url;
+  final String platform;
+  final String title;
+  final String? thumbnail;
+  final String category;
+  final bool favorite;
+  final String? notes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  LinkModel({
+    required this.id,
+    required this.url,
+    required this.platform,
+    required this.title,
+    this.thumbnail,
+    required this.category,
+    this.favorite = false,
+    this.notes,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  LinkModel copyWith({
+    String? id,
+    String? url,
+    String? platform,
+    String? title,
+    String? thumbnail,
+    String? category,
+    bool? favorite,
+    String? notes,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return LinkModel(
+      id: id ?? this.id,
+      url: url ?? this.url,
+      platform: platform ?? this.platform,
+      title: title ?? this.title,
+      thumbnail: thumbnail ?? this.thumbnail,
+      category: category ?? this.category,
+      favorite: favorite ?? this.favorite,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'url': url,
+      'platform': platform,
+      'title': title,
+      'thumbnail': thumbnail,
+      'category': category,
+      'favorite': favorite,
+      'notes': notes,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
+  factory LinkModel.fromMap(Map<String, dynamic> map) {
+    return LinkModel(
+      id: map['id'] as String,
+      url: map['url'] as String,
+      platform: map['platform'] as String,
+      title: map['title'] as String,
+      thumbnail: map['thumbnail'] as String?,
+      category: map['category'] as String,
+      favorite: map['favorite'] == 1 || map['favorite'] == true,
+      notes: map['notes'] as String?,
+      createdAt: _parseDate(map['created_at'] ?? map['createdAt']),
+      updatedAt: _parseDate(map['updated_at'] ?? map['updatedAt']),
+    );
+  }
+
+  static DateTime _parseDate(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.parse(value);
+    return DateTime.now();
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory LinkModel.fromJson(String source) =>
+      LinkModel.fromMap(json.decode(source) as Map<String, dynamic>);
+}
+
+class CategoryModel {
+  final String id;
+  final String name;
+  final DateTime createdAt;
+
+  CategoryModel({
+    required this.id,
+    required this.name,
+    required this.createdAt,
+  });
+
+  CategoryModel copyWith({
+    String? id,
+    String? name,
+    DateTime? createdAt,
+  }) {
+    return CategoryModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  factory CategoryModel.fromMap(Map<String, dynamic> map) {
+    return CategoryModel(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      createdAt: _parseDate(map['created_at'] ?? map['createdAt']),
+    );
+  }
+
+  static DateTime _parseDate(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.parse(value);
+    return DateTime.now();
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory CategoryModel.fromJson(String source) =>
+      CategoryModel.fromMap(json.decode(source) as Map<String, dynamic>);
+}
