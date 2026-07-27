@@ -19,7 +19,34 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        beforeOpen: (details) async {
+          print('[DB] beforeOpen ejecutado');
+          await customStatement(
+              'CREATE TABLE IF NOT EXISTS backup_status_table ('
+              'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+              'last_backup_at INTEGER, '
+              'modifications_since_last_backup INTEGER NOT NULL DEFAULT 0, '
+              'last_result TEXT, '
+              'last_attempt_at INTEGER, '
+              'attempt_count INTEGER NOT NULL DEFAULT 0, '
+              'is_running INTEGER NOT NULL DEFAULT 0'
+              ')');
+          print('[DB] backup_status_table creada o ya existente');
+        },
         onUpgrade: (m, from, to) async {
+          print('[DB] onUpgrade: from=$from to=$to');
+          if (from < 2) {
+            await customStatement(
+                'CREATE TABLE IF NOT EXISTS backup_status_table ('
+                'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+                'last_backup_at INTEGER, '
+                'modifications_since_last_backup INTEGER NOT NULL DEFAULT 0, '
+                'last_result TEXT, '
+                'last_attempt_at INTEGER, '
+                'attempt_count INTEGER NOT NULL DEFAULT 0, '
+                'is_running INTEGER NOT NULL DEFAULT 0'
+                ')');
+          }
           if (from < 3) {
             await customStatement(
                 'CREATE INDEX IF NOT EXISTS idx_link_category ON link_table (category)');
@@ -34,6 +61,7 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(
                 'ALTER TABLE link_table ADD COLUMN source TEXT');
           }
+          print('[DB] onUpgrade completado');
         },
       );
 
@@ -214,10 +242,19 @@ class AppDatabase extends _$AppDatabase {
       (select(categoryTable)..orderBy([(t) => OrderingTerm.asc(t.name)]))
           .watch();
 
-  Future<BackupStatusTableData?> getBackupStatus() =>
-      (select(backupStatusTable)..limit(1)).getSingleOrNull();
+  Future<BackupStatusTableData?> getBackupStatus() {
+    print('[DB] getBackupStatus: SELECT * FROM backup_status_table LIMIT 1');
+    return (select(backupStatusTable)..limit(1)).getSingleOrNull().then((result) {
+      print('[DB] SELECT backup_status_table OK');
+      return result;
+    }).catchError((e) {
+      print('[DB] ERROR en SELECT backup_status_table: $e');
+      throw e;
+    });
+  }
 
   Future<void> ensureBackupStatus() async {
+    print('[DB] ensureBackupStatus()');
     final existing = await getBackupStatus();
     if (existing == null) {
       await into(backupStatusTable).insert(
@@ -228,6 +265,7 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
     }
+    print('[DB] ensureBackupStatus: OK');
   }
 
   Future<void> incrementModifications() async {
