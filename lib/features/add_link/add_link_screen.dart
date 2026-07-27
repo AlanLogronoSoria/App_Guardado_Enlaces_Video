@@ -40,8 +40,13 @@ class _AddLinkScreenState extends ConsumerState<AddLinkScreen> {
   void initState() {
     super.initState();
     if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+      print('[ADD LINK] initialUrl recibido: ${widget.initialUrl}');
       _urlController.text = widget.initialUrl!;
+      print('[ADD LINK] urlController actualizado');
+      print('[ADD LINK] _processUrl iniciado');
       _processUrl(widget.initialUrl!);
+    } else {
+      print('[ADD LINK] sin initialUrl — abriendo formulario vacío');
     }
   }
 
@@ -53,7 +58,9 @@ class _AddLinkScreenState extends ConsumerState<AddLinkScreen> {
   }
 
   Future<void> _processUrl(String url) async {
+    print('[ADD LINK] _processUrl: detectando plataforma para $url');
     final platform = PlatformDetector.detect(url);
+    print('[ADD LINK] plataforma detectada: ${platform.displayName}');
     setState(() {
       _detectedPlatform = platform;
       _isLoadingMetadata = true;
@@ -65,8 +72,11 @@ class _AddLinkScreenState extends ConsumerState<AddLinkScreen> {
     }
 
     final metadataService = ref.read(metadataServiceProvider);
+    print('[METADATA] fetchMetadata iniciado para $url');
     try {
       final metadata = await metadataService.fetchMetadata(url, platform);
+      print('[METADATA] título: ${metadata.title}');
+      print('[METADATA] miniatura: ${metadata.thumbnail}');
       if (mounted) {
         setState(() {
           _isLoadingMetadata = false;

@@ -8,7 +8,6 @@ import 'core/constants/app_constants.dart';
 import 'core/services/platform_detector.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
-import 'features/quick_save/quick_save_sheet.dart';
 import 'shared/providers/core_providers.dart';
 import 'shared/providers/link_providers.dart';
 import 'shared/providers/category_providers.dart';
@@ -43,6 +42,7 @@ class InventarioVideoApp extends ConsumerStatefulWidget {
 
 class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
   StreamSubscription<dynamic>? _shareSubscription;
+  bool _processingShare = false;
 
   @override
   void initState() {
@@ -100,28 +100,27 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
     debugPrint('[SHARE] _processIncomingText input: "$text"');
     String? extractedUrl;
     final uri = Uri.tryParse(text);
-    debugPrint('[SHARE] Uri.tryParse result: $uri');
     if (uri != null &&
         uri.hasScheme &&
         (uri.scheme == 'http' || uri.scheme == 'https')) {
       extractedUrl = text.trim();
-      debugPrint('[SHARE] direct URL match: "$extractedUrl"');
+      debugPrint('[SHARE] URL directa detectada: $extractedUrl');
     } else if (text.contains('http')) {
       final match = RegExp(r'(https?://\S+)').firstMatch(text);
       if (match != null) {
         extractedUrl = match.group(1)!.trim();
-        debugPrint('[SHARE] regex URL match: "$extractedUrl"');
+        debugPrint('[SHARE] URL extraída por regex: $extractedUrl');
       }
     }
 
     if (extractedUrl != null) {
-      debugPrint('[SHARE] setting shareUrlProvider to: "$extractedUrl"');
+      debugPrint('[SHARE] → shareUrlProvider.state = $extractedUrl');
       Future.microtask(() {
         ref.read(shareUrlProvider.notifier).state = extractedUrl;
-        debugPrint('[SHARE] shareUrlProvider state set');
+        debugPrint('[SHARE] shareUrlProvider actualizado');
       });
     } else {
-      debugPrint('[SHARE] WARNING: no URL extracted from text');
+      debugPrint('[SHARE] ERROR: no se pudo extraer URL');
     }
   }
 
@@ -139,10 +138,12 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
       themeMode: themeMode,
       routerConfig: router,
       builder: (context, child) {
-        if (shareUrl != null) {
+        if (shareUrl != null && !_processingShare) {
+          _processingShare = true;
           final url = shareUrl;
-          ref.read(shareUrlProvider.notifier).state = null;
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(shareUrlProvider.notifier).state = null;
+            _processingShare = false;
             _handleShareByMode(context, url);
           });
         }
@@ -156,7 +157,7 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
 
     switch (mode) {
       case SaveMode.confirmation:
-        _showQuickSaveSheet(context, url);
+        _navigateToAddLink(context, url);
       case SaveMode.fast:
         _handleFastMode(context, url);
       case SaveMode.auto:
@@ -164,20 +165,16 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
     }
   }
 
-  void _showQuickSaveSheet(BuildContext context, String url) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => QuickSaveSheet(url: url),
-    );
+  void _navigateToAddLink(BuildContext context, String url) {
+    debugPrint('[NAV] navegando a AddLinkScreen con URL: $url');
+    final router = ref.read(routerProvider);
+    router.push('${AppConfig.addLinkRoute}?url=${Uri.encodeComponent(url)}');
   }
 
   Future<void> _handleFastMode(BuildContext context, String url) async {
     final platform = PlatformDetector.detect(url);
     if (platform == PlatformType.unknown) {
-      _showQuickSaveSheet(context, url);
+      _navigateToAddLink(context, url);
       return;
     }
 
@@ -230,7 +227,7 @@ class _InventarioVideoAppState extends ConsumerState<InventarioVideoApp> {
     }
 
     if (context.mounted) {
-      _showQuickSaveSheet(context, url);
+      _navigateToAddLink(context, url);
     }
   }
 
