@@ -153,13 +153,70 @@ class _AddLinkScreenState extends ConsumerState<AddLinkScreen> {
     }
   }
 
+  void _handleBack() {
+    final hasUrl = _urlController.text.trim().isNotEmpty;
+    final hasTitle = _titleController.text.trim().isNotEmpty;
+    final hasData = hasUrl || hasTitle ||
+        _detectedPlatform != PlatformType.unknown ||
+        (_selectedCategory != null &&
+            _selectedCategory != AppConstants.defaultCategory) ||
+        _thumbnailUrl != null;
+
+    if (!hasData) {
+      _goHome();
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+            'Los cambios no guardados se perderán.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _urlController.clear();
+              _titleController.clear();
+              _goHome();
+            },
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _goHome() {
+    context.go(AppConfig.homeRoute);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final categoriesAsync = ref.watch(allCategoriesProvider);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBack();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
+        leading: _saved
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _isSaving ? null : _handleBack,
+                tooltip: 'Regresar',
+              ),
         title: const Text('Agregar enlace'),
         actions: _saved
             ? null
@@ -180,6 +237,7 @@ class _AddLinkScreenState extends ConsumerState<AddLinkScreen> {
       body: _saved
           ? _buildSuccessView(colorScheme)
           : _buildForm(context, colorScheme, categoriesAsync),
+      ),
     );
   }
 
