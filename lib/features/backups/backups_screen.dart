@@ -31,93 +31,174 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Copias de seguridad')),
+      appBar: AppBar(
+        title: const Text('Copias de seguridad'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(28),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              'Protege tu inventario sincronizando tus copias en Microsoft OneDrive.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant),
+            ),
+          ),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildOneDriveCard(context, isCloudAuth, colorScheme),
+          const SizedBox(height: 16),
           _buildStatusCard(context, statusAsync, colorScheme),
           const SizedBox(height: 16),
           _buildCountsCard(context, countsAsync, colorScheme),
           const SizedBox(height: 16),
-          _buildActionsCard(context, colorScheme),
+          _buildActionGrid(context, colorScheme),
           const SizedBox(height: 16),
-          _buildOneDriveCard(context, isCloudAuth, colorScheme),
+          _buildSecurityCard(context, colorScheme),
+          const SizedBox(height: 40),
         ],
       ),
     );
   }
 
-  Widget _buildOneDriveCard(
-      BuildContext context, bool isAuth, ColorScheme colorScheme) {
+  Widget _buildActionGrid(BuildContext context, ColorScheme colorScheme) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Acciones', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: _buildActionTile(context, Icons.cloud_upload_outlined, 'Crear copia',
+                _isBackingUp ? null : () => _backupNow(), _isBackingUp, 'Respaldando...', colorScheme)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildActionTile(context, Icons.cloud_download_outlined, 'Restaurar',
+                _isRestoring ? null : () => _showRestorePicker(context), _isRestoring, 'Restaurando...', colorScheme)),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: _buildActionTile(context, Icons.sync, 'Sincronizar',
+                _isBackingUp ? null : () => _backupNow(), false, null, colorScheme)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildActionTile(context, Icons.history, 'Historial',
+                () => _showCloudFiles(context, ref.read(cloudBackupProvider)), false, null, colorScheme)),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildActionTile(BuildContext context, IconData icon, String label,
+      VoidCallback? onTap, bool loading, String? loadingText, ColorScheme colorScheme) {
+    return Material(
+      color: colorScheme.surfaceContainerHighest.withAlpha(80),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+          child: Column(children: [
+            if (loading)
+              SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+            else
+              Icon(icon, size: 28, color: colorScheme.primary),
+            const SizedBox(height: 8),
+            Text(loading && loadingText != null ? loadingText : label,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSecurityCard(BuildContext context, ColorScheme colorScheme) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(children: [
+          Icon(Icons.shield_outlined, size: 32, color: colorScheme.primary.withAlpha(150)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Protección de tus datos', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text('Tus copias se almacenan únicamente en tu cuenta personal de Microsoft OneDrive.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildOneDriveCard(BuildContext context, bool isAuth, ColorScheme colorScheme) {
     final provider = ref.watch(onedriveProvider);
     final email = provider.accountEmail;
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.cloud, color: isAuth ? Colors.blue : colorScheme.onSurfaceVariant, size: 22),
-                const SizedBox(width: 10),
-                Text('OneDrive',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-              ],
+        padding: const EdgeInsets.all(24),
+        child: Column(children: [
+          if (!isAuth) ...[
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withAlpha(80),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(Icons.cloud_off_rounded, size: 32, color: colorScheme.primary.withAlpha(150)),
+            ),
+            const SizedBox(height: 16),
+            Text('No conectado', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text('Inicia sesión con tu cuenta Microsoft para guardar automáticamente tus copias de seguridad y restaurarlas cuando lo necesites.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _startOneDriveAuth(context, provider),
+                icon: const Icon(Icons.login),
+                label: const Text('Conectar con Microsoft OneDrive'),
+                style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              ),
+            ),
+          ] else ...[
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: Colors.green.withAlpha(25),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(Icons.check_circle_rounded, size: 32, color: Colors.green.shade600),
             ),
             const SizedBox(height: 12),
-            if (!isAuth) ...[
-              Text('Estado: No conectado',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _startOneDriveAuth(context, provider),
-                  icon: const Icon(Icons.login),
-                  label: const Text('Iniciar sesión con Microsoft'),
-                ),
-              ),
-            ] else ...[
-              if (email != null) ...[
-                Text('Cuenta: $email',
-                    style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 4),
-              ],
-              Text('Estado: Conectado',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.green, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 12),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                FilledButton.icon(
-                  onPressed: () => _cloudBackup(context, provider),
-                  icon: const Icon(Icons.cloud_upload, size: 18),
-                  label: const Text('Crear Backup'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _cloudRestore(context, provider),
-                  icon: const Icon(Icons.cloud_download, size: 18),
-                  label: const Text('Restaurar'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => _showCloudFiles(context, provider),
-                  icon: const Icon(Icons.list, size: 18),
-                  label: const Text('Ver Copias'),
-                ),
-                TextButton.icon(
-                  onPressed: () async {
-                    await provider.logout();
-                    ref.read(cloudAuthStateProvider.notifier).state = false;
-                    setState(() {});
-                  },
-                  icon: const Icon(Icons.logout, size: 18),
-                  label: const Text('Cerrar sesión'),
-                ),
-              ]),
+            Text('OneDrive conectado', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: Colors.green.shade700)),
+            if (email != null) ...[
+              const SizedBox(height: 4),
+              Text(email, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
             ],
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await provider.logout();
+                  ref.read(cloudAuthStateProvider.notifier).state = false;
+                  setState(() {});
+                },
+                icon: const Icon(Icons.logout, size: 18),
+                label: const Text('Cerrar sesión'),
+                style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+              ),
+            ),
           ],
-        ),
+        ]),
       ),
     );
   }
@@ -491,64 +572,6 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant)),
         ],
-      ),
-    );
-  }
-
-  Widget _buildActionsCard(
-      BuildContext context, ColorScheme colorScheme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.sync_outlined,
-                    color: colorScheme.primary, size: 22),
-                const SizedBox(width: 10),
-                Text('Acciones',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _isBackingUp ? null : () => _backupNow(),
-              icon: _isBackingUp
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.cloud_upload_outlined),
-              label: Text(_isBackingUp ? 'Respaldando...' : 'Respaldar ahora'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _isRestoring
-                  ? null
-                  : () => _showRestorePicker(context),
-              icon: _isRestoring
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.cloud_download_outlined),
-              label:
-                  Text(_isRestoring ? 'Restaurando...' : 'Restaurar respaldo'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

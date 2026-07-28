@@ -23,8 +23,7 @@ class BackupRepository {
     try {
       if (!_backupService.isConfigured) {
         return const BackupFailure(
-          error: 'Supabase no está configurado. '
-              'Configura las credenciales en AppConfig.',
+          error: 'El servicio de copias en la nube no está configurado.',
         );
       }
 
@@ -64,7 +63,7 @@ class BackupRepository {
     try {
       if (!_backupService.isConfigured) {
         return const BackupFailure(
-          error: 'Supabase no está configurado.',
+          error: 'El servicio de copias en la nube no está configurado.',
         );
       }
 
@@ -123,7 +122,7 @@ class BackupRepository {
     try {
       if (!_backupService.isConfigured) {
         return const BackupFailure(
-          error: 'Supabase no está configurado.',
+          error: 'El servicio de copias en la nube no está configurado.',
         );
       }
 
@@ -148,7 +147,7 @@ class BackupRepository {
     try {
       if (!_backupService.isConfigured) {
         return const BackupFailure(
-          error: 'Supabase no está configurado.',
+          error: 'El servicio de copias en la nube no está configurado.',
         );
       }
 

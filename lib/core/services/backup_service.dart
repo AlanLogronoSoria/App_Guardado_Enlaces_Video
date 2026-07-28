@@ -20,7 +20,7 @@ class BackupService {
   Future<String> uploadBackup(String fileName, String jsonContent) async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase no está configurado.');
+      throw Exception('El servicio de copias en la nube no está configurado.');
     }
 
     final bytes = utf8.encode(jsonContent);
@@ -34,7 +34,7 @@ class BackupService {
   Future<String> downloadBackup(String fileName) async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase no está configurado.');
+      throw Exception('El servicio de copias en la nube no está configurado.');
     }
 
     final bytes = await client.storage
@@ -47,7 +47,7 @@ class BackupService {
   Future<List<String>> listBackups() async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase no está configurado.');
+      throw Exception('El servicio de copias en la nube no está configurado.');
     }
 
     final result = await client.storage
@@ -64,7 +64,7 @@ class BackupService {
   Future<void> deleteBackup(String fileName) async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase no está configurado.');
+      throw Exception('El servicio de copias en la nube no está configurado.');
     }
 
     await client.storage
