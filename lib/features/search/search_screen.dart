@@ -6,6 +6,7 @@ import '../../core/config/app_config.dart';
 import '../../core/constants/app_constants.dart';
 import '../../shared/providers/link_providers.dart';
 import '../../shared/providers/core_providers.dart';
+import '../../shared/providers/category_providers.dart';
 import '../../shared/widgets/link_card.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -35,8 +36,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final resultsAsync = ref.watch(searchResultsProvider(query));
 
     final links = resultsAsync.valueOrNull ?? [];
-    final categories = links.map((l) => l.category).toSet().toList()..sort();
     final platforms = links.map((l) => l.platform).toSet().toList()..sort();
+    final categoriesAsync = ref.watch(allCategoriesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -63,6 +64,83 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     : null,
               ),
             ),
+          ),
+          categoriesAsync.when(
+            loading: () => const SizedBox(height: 8),
+            error: (_, __) => const SizedBox(height: 8),
+            data: (categories) {
+              if (categories.isEmpty) return const SizedBox(height: 8);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                    child: Text('Categorías',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                  SizedBox(
+                    height: 40,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: categories.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (_, i) {
+                        final cat = categories[i];
+                        final catColor = cat.displayColor ??
+                            Theme.of(context).colorScheme.primary;
+                        final selected = _selectedCategory == cat.name;
+                        return GestureDetector(
+                          onTap: () => setState(() {
+                            _selectedCategory =
+                                selected ? '' : cat.name;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? catColor.withAlpha(30)
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: selected
+                                    ? catColor
+                                    : Colors.transparent,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(cat.iconData, size: 14, color: catColor),
+                                const SizedBox(width: 5),
+                                Text(cat.name,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          color: selected
+                                              ? catColor
+                                              : Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                          fontWeight: FontWeight.w600,
+                                        )),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           if (platforms.isNotEmpty)
             Padding(
@@ -96,28 +174,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       );
                     }),
                   ],
-                ),
-              ),
-            ),
-          if (categories.isNotEmpty)
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: categories.map((c) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _buildFilterChip(
-                        label: c,
-                        selected: _selectedCategory == c,
-                        onSelected: (v) => setState(
-                            () => _selectedCategory = v ? c : ''),
-                        icon: Icons.folder,
-                      ),
-                    );
-                  }).toList(),
                 ),
               ),
             ),

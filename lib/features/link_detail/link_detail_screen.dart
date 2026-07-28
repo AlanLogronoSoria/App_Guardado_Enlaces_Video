@@ -368,6 +368,8 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
           maxLength: AppConstants.maxNotesLength,
           decoration: const InputDecoration(
             labelText: 'Notas personales',
+            hintText: 'Ingresa palabras clave, #hashtags, ideas o información '
+                'que te ayude a localizar mejor tus links.',
           ),
         ),
       ],

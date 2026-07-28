@@ -246,8 +246,8 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.file_download,
                 title: 'Importar desde WhatsApp',
                 description:
-                    'Copia el texto de un chat, pégalo en Importar y la app extraerá '
-                    'automáticamente los enlaces de videos.',
+                    'Copia grupos de links de tus chats, pégalos en la sección '
+                    'Importar y la aplicación los registrará automáticamente.',
               ),
               _HelpItem(
                 icon: Icons.search,
