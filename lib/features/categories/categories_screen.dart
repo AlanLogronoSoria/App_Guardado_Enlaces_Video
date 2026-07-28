@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../shared/models/link.dart';
 import '../../shared/providers/category_providers.dart';
+import '../../shared/providers/link_providers.dart';
 import '../../shared/providers/core_providers.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/category_icons.dart';
@@ -51,6 +52,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (categories) {
+          final linksAsync = ref.watch(allLinksProvider);
+          final linkCounts = <String, int>{};
+          if (linksAsync.valueOrNull != null) {
+            for (final l in linksAsync.value!) {
+              linkCounts[l.category] = (linkCounts[l.category] ?? 0) + 1;
+            }
+          }
+
           if (categories.isEmpty) {
             return Center(
               child: Column(
@@ -69,14 +78,14 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           return ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
             itemCount: categories.length,
-            itemBuilder: (context, index) => _buildItem(categories[index]),
+            itemBuilder: (context, index) => _buildItem(categories[index], linkCounts[categories[index].name] ?? 0),
           );
         },
       ),
     );
   }
 
-  Widget _buildItem(CategoryModel category) {
+  Widget _buildItem(CategoryModel category, int count) {
     final colorScheme = Theme.of(context).colorScheme;
     final catColor = category.displayColor ?? colorScheme.primary;
 
@@ -89,6 +98,9 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
         ),
         title: Text(category.name,
             style: Theme.of(context).textTheme.titleMedium),
+        subtitle: Text('${count == 1 ? '1 video' : '$count videos'}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant)),
         trailing: PopupMenuButton<String>(
           onSelected: (v) {
             switch (v) {

@@ -32,9 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() {
       if (_selectedLinkIds.contains(linkId)) {
         _selectedLinkIds.remove(linkId);
-        if (_selectedLinkIds.isEmpty) {
-          _isSelectionMode = false;
-        }
+        if (_selectedLinkIds.isEmpty) _isSelectionMode = false;
       } else {
         _selectedLinkIds.add(linkId);
       }
@@ -64,31 +62,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 40,
-                height: 4,
+                width: 40, height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant
-                      .withAlpha(60),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(60),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-                child: Text(
-                  'Mover ${_selectedLinkIds.length} elemento(s) a:',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
+                child: Text('Mover ${_selectedLinkIds.length} elemento(s) a:',
+                    style: Theme.of(context).textTheme.titleSmall),
               ),
               ...categories.map((cat) => ListTile(
-                    leading: const Icon(Icons.folder_outlined),
+                    leading: Icon(cat.iconData, size: 20, color: cat.displayColor ?? Theme.of(context).colorScheme.primary),
                     title: Text(cat.name),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _moveSelectedTo(cat.name);
-                    },
+                    onTap: () { Navigator.pop(ctx); _moveSelectedTo(cat.name); },
                   )),
             ],
           ),
@@ -111,15 +100,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final linksAsync = ref.watch(allLinksProvider);
     final categoriesAsync = ref.watch(allCategoriesProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: _isSelectionMode
           ? AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _exitSelectionMode,
-              ),
+              leading: IconButton(icon: const Icon(Icons.close), onPressed: _exitSelectionMode),
               title: Text('${_selectedLinkIds.length} seleccionados'),
               actions: [
                 TextButton.icon(
@@ -147,18 +132,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               label: const Text('Nuevo'),
             ),
       body: linksAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        error: (error, _) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 48, color: colorScheme.error),
-              const SizedBox(height: 16),
-              const Text('Error al cargar los videos'),
-            ],
-          ),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        error: (_, __) => const SizedBox(),
         data: (links) {
           if (links.isEmpty) return _buildEmptyState(context);
           return _buildContent(context, links, categoriesAsync);
@@ -169,47 +144,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildEmptyState(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withAlpha(100),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Icon(Icons.video_library_rounded,
-                  size: 44, color: colorScheme.primary),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(
+            width: 100, height: 100,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withAlpha(100),
+              borderRadius: BorderRadius.circular(24),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Sin videos',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: colorScheme.onSurface,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Comparte desde cualquier red social\npara empezar a guardar videos',
+            child: Icon(Icons.video_library_rounded, size: 44, color: colorScheme.primary),
+          ),
+          const SizedBox(height: 24),
+          Text('Sin videos', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: colorScheme.onSurface)),
+          const SizedBox(height: 8),
+          Text('Comparte desde cualquier red social\npara empezar a guardar videos',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-            ),
-            const SizedBox(height: 32),
-            FilledButton.icon(
-              onPressed: () => context.go(AppConfig.addLinkRoute),
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text('Agregar primer video'),
-            ),
-          ],
-        ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant, height: 1.4)),
+          const SizedBox(height: 32),
+          FilledButton.icon(
+            onPressed: () => context.go(AppConfig.addLinkRoute),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text('Agregar primer video'),
+          ),
+        ]),
       ),
     );
   }
@@ -217,7 +176,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildContent(BuildContext context, List<LinkModel> links,
       AsyncValue<List<CategoryModel>> categoriesAsync) {
     final groupedLinks = <String, List<LinkModel>>{};
-
     for (final link in links) {
       groupedLinks.putIfAbsent(link.category, () => []).add(link);
     }
@@ -229,134 +187,189 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return a.compareTo(b);
       });
 
+    final favorites = links.where((l) => l.favorite).toList();
+
     return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(allLinksProvider);
-      },
+      onRefresh: () async => ref.invalidate(allLinksProvider),
       edgeOffset: 80,
       child: CustomScrollView(
         slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            sliver: SliverToBoxAdapter(
+              child: _buildGreeting(context, links.length, categoriesAsync),
+            ),
+          ),
           if (!_isSelectionMode)
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsets.fromLTRB(0, 24, 0, 0),
               sliver: SliverToBoxAdapter(
                 child: categoriesAsync.when(
-                  loading: () => const SizedBox(height: 42),
-                  error: (_, __) => const SizedBox(height: 42),
-                  data: (categories) =>
-                      _buildCategoryChips(context, categories, groupedLinks),
+                  loading: () => const SizedBox(height: 44),
+                  error: (_, __) => const SizedBox(height: 44),
+                  data: (categories) => _buildCategoriesSection(context, categories, groupedLinks),
                 ),
               ),
             ),
+          if (favorites.isNotEmpty && !_isSelectionMode) ...[
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+              sliver: SliverToBoxAdapter(
+                child: Row(children: [
+                  Icon(Icons.favorite_rounded, size: 18, color: Theme.of(context).colorScheme.error),
+                  const SizedBox(width: 8),
+                  Text('Favoritos', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  Text('${favorites.length}', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                ]),
+              ),
+            ),
+            _buildFavoritesGrid(context, favorites),
+          ],
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+            sliver: SliverToBoxAdapter(
+              child: Text('Todos los videos',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            ),
+          ),
           for (final category in sortedCategories) ...[
             _buildCategoryHeader(context, category, groupedLinks[category]!),
             _buildCategoryGrid(context, category, groupedLinks[category]!),
           ],
-          const SliverPadding(padding: EdgeInsets.only(bottom: 88)),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 96)),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryChips(BuildContext context,
-      List<CategoryModel> categories,
+  Widget _buildGreeting(BuildContext context, int total,
+      AsyncValue<List<CategoryModel>> categoriesAsync) {
+    final catCount = categoriesAsync.valueOrNull?.length ?? 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('¡Hola!',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text('$total videos guardados • $catCount categorías',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 2),
+        Text('Organiza fácilmente tus enlaces favoritos',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withAlpha(160))),
+      ],
+    );
+  }
+
+  Widget _buildCategoriesSection(BuildContext context, List<CategoryModel> categories,
       Map<String, List<LinkModel>> groupedLinks) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final cat = categories[index];
-          final isExpanded = _expandedCategories[cat.name] ?? true;
-          final count = groupedLinks[cat.name]?.length ?? 0;
-
-          return FilterChip(
-            label: Text('${cat.name} ($count)'),
-            selected: isExpanded,
-            onSelected: (_) {
-              setState(() {
-                _expandedCategories[cat.name] = !isExpanded;
-              });
-            },
-            selectedColor: colorScheme.primaryContainer,
-            checkmarkColor: colorScheme.onPrimaryContainer,
-            side: isExpanded
-                ? BorderSide(color: colorScheme.primary, width: 1.5)
-                : BorderSide.none,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(children: [
+            Icon(Icons.folder_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('Categorías', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            const Spacer(),
+            TextButton(
+              onPressed: () => context.go(AppConfig.categoriesRoute),
+              child: const Text('Ver todas', style: TextStyle(fontSize: 13)),
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCategoryHeader(
-      BuildContext context, String category, List<LinkModel> links) {
-    final isExpanded = _expandedCategories[category] ?? true;
-    if (!isExpanded) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-      sliver: SliverToBoxAdapter(
-        child: Text(
-          category,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+          ]),
         ),
-      ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 44,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final cat = categories[index];
+              final isExpanded = _expandedCategories[cat.name] ?? true;
+              final count = groupedLinks[cat.name]?.length ?? 0;
+              final catColor = cat.displayColor ?? Theme.of(context).colorScheme.primary;
+
+              return Padding(
+                padding: EdgeInsets.only(right: index < categories.length - 1 ? 8 : 0),
+                child: FilterChip(
+                  avatar: Icon(cat.iconData, size: 14, color: isExpanded ? Theme.of(context).colorScheme.onPrimaryContainer : catColor),
+                  label: Text('${cat.name} ($count)'),
+                  selected: isExpanded,
+                  onSelected: (_) => setState(() => _expandedCategories[cat.name] = !isExpanded),
+                  selectedColor: Theme.of(context).colorScheme.primaryContainer,
+                  checkmarkColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                  side: isExpanded ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 1.5) : BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildCategoryGrid(
-      BuildContext context, String category, List<LinkModel> links) {
-    final isExpanded = _expandedCategories[category] ?? true;
-    if (!isExpanded) {
-      return const SliverToBoxAdapter(child: SizedBox.shrink());
-    }
-
+  Widget _buildFavoritesGrid(BuildContext context, List<LinkModel> links) {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.72,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
+          crossAxisCount: 2, childAspectRatio: 0.72, crossAxisSpacing: 12, mainAxisSpacing: 12,
         ),
         delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final link = links[index];
-            return LinkCard(
-              link: link,
-              isSelectionMode: _isSelectionMode,
-              isSelected: _selectedLinkIds.contains(link.id),
-              onTap: _isSelectionMode
-                  ? () => _toggleSelection(link.id)
-                  : () => context
-                      .push('${AppConfig.linkDetailRoute}/${link.id}'),
-              onFavoriteToggle: _isSelectionMode
-                  ? null
-                  : () {
-                      ref.read(linkRepositoryProvider).toggleFavorite(link.id);
-                    },
-              onLongPress: _isSelectionMode
-                  ? null
-                  : () => _enterSelectionMode(link.id),
-            );
-          },
+          (context, index) => _buildGridItem(context, links[index]),
           childCount: links.length,
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoryHeader(BuildContext context, String category, List<LinkModel> links) {
+    final isExpanded = _expandedCategories[category] ?? true;
+    if (!isExpanded) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+      sliver: SliverToBoxAdapter(
+        child: Text(category, style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
+      ),
+    );
+  }
+
+  Widget _buildCategoryGrid(BuildContext context, String category, List<LinkModel> links) {
+    final isExpanded = _expandedCategories[category] ?? true;
+    if (!isExpanded) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, childAspectRatio: 0.72, crossAxisSpacing: 12, mainAxisSpacing: 12,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => _buildGridItem(context, links[index]),
+          childCount: links.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridItem(BuildContext context, LinkModel link) {
+    return LinkCard(
+      link: link,
+      isSelectionMode: _isSelectionMode,
+      isSelected: _selectedLinkIds.contains(link.id),
+      onTap: _isSelectionMode
+          ? () => _toggleSelection(link.id)
+          : () => context.push('${AppConfig.linkDetailRoute}/${link.id}'),
+      onFavoriteToggle: _isSelectionMode
+          ? null
+          : () => ref.read(linkRepositoryProvider).toggleFavorite(link.id),
+      onLongPress: _isSelectionMode ? null : () => _enterSelectionMode(link.id),
     );
   }
 }

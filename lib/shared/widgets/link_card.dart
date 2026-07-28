@@ -72,16 +72,17 @@ class _LinkCardState extends State<LinkCard> {
         children: [
           AnimatedScale(
             scale: _isHovering ? 0.97 : 1.0,
-            duration: const Duration(milliseconds: 100),
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOutCubic,
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                color: colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(20),
+                color: colorScheme.surface,
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.shadow.withAlpha(15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    color: colorScheme.shadow.withAlpha(12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),

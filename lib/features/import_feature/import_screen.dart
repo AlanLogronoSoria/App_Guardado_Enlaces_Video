@@ -19,205 +19,197 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
   List<String> _extractedUrls = [];
   bool _isProcessing = false;
   String _statusMessage = '';
+  bool _isComplete = false;
+  int _importedCount = 0;
 
   void _extractUrls() {
     final text = _textController.text;
     final urls = UrlExtractor.extractSocialUrls(text);
-
     setState(() {
       _extractedUrls = urls;
-      if (urls.isEmpty) {
-        _statusMessage = 'No se encontraron enlaces de redes sociales.';
-      } else {
-        _statusMessage = '${urls.length} enlace(s) encontrado(s).';
-      }
+      _isComplete = false;
+      _statusMessage = urls.isEmpty
+          ? 'No se encontraron enlaces de redes sociales.'
+          : '${urls.length} enlace(s) encontrado(s).';
     });
   }
 
   Future<void> _importAll() async {
     if (_extractedUrls.isEmpty) return;
-
-    setState(() {
-      _isProcessing = true;
-      _statusMessage = 'Procesando enlaces...';
-    });
+    setState(() { _isProcessing = true; _statusMessage = 'Procesando enlaces...'; });
 
     final linkRepo = ref.read(linkRepositoryProvider);
     final metadataService = ref.read(metadataServiceProvider);
-
     int imported = 0;
 
     for (final url in _extractedUrls) {
       try {
         final platform = PlatformDetector.detect(url);
-        final platformName = platform.name;
-
         final metadata = await metadataService.fetchMetadata(url, platform);
-
         await linkRepo.saveLink(
-          url: url,
-          platform: platformName,
+          url: url, platform: platform.name,
           title: metadata.title ?? 'Video de ${platform.displayName}',
-          thumbnail: metadata.thumbnail,
-          category: AppConstants.defaultCategory,
+          thumbnail: metadata.thumbnail, category: AppConstants.defaultCategory,
         );
-
         imported++;
-        setState(() {
-          _statusMessage = 'Importados: $imported/${_extractedUrls.length}';
-        });
+        setState(() { _statusMessage = 'Importados: $imported/${_extractedUrls.length}'; });
       } catch (_) {}
     }
 
     setState(() {
       _isProcessing = false;
+      _isComplete = true;
+      _importedCount = imported;
       _statusMessage = '¡$imported enlace(s) importado(s) exitosamente!';
       _extractedUrls = [];
       _textController.clear();
     });
-
     ref.invalidate(allLinksProvider);
     ref.invalidate(allCategoriesProvider);
   }
 
   @override
-  void dispose() {
-    _textController.dispose();
-    super.dispose();
-  }
+  void dispose() { _textController.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final hasText = _textController.text.isNotEmpty;
+    final hasUrls = _extractedUrls.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Importar enlaces'),
-      ),
+      appBar: AppBar(title: const Text('Importar enlaces')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withAlpha(80),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.lightbulb_outline,
-                    color: colorScheme.primary,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Pega cualquier bloque de texto de WhatsApp. '
-                      'La app extraerá automáticamente solo los enlaces '
-                      'de TikTok, YouTube, Instagram y Facebook.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
+        padding: const EdgeInsets.all(20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(children: [
+              Text('Pega grupos de enlaces para registrarlos automáticamente.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Text('El sistema detectará la plataforma, obtendrá el título\ny organizará los videos por categorías.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+            ]),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: colorScheme.outlineVariant.withAlpha(hasUrls ? 200 : 80), width: 1.5),
+              color: colorScheme.surfaceContainerHighest.withAlpha(40),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _textController,
-              maxLines: 8,
-              onChanged: (_) => _extractUrls(),
-              decoration: const InputDecoration(
-                hintText: 'Pega aquí el texto con enlaces...',
-                alignLabelWithHint: true,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (_extractedUrls.isNotEmpty) ...[
-              Text(
-                _statusMessage,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              ...List.generate(_extractedUrls.length, (index) {
-                final url = _extractedUrls[index];
-                final platform = PlatformDetector.detect(url);
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: Icon(
-                      _getPlatformIcon(platform),
-                      color: colorScheme.primary,
-                    ),
-                    title: Text(
-                      url,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    subtitle: Text(
-                      platform.displayName,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.primary,
-                          ),
-                    ),
+            child: Column(children: [
+              if (!hasText && !_isComplete) ...[
+                const SizedBox(height: 28),
+                Icon(Icons.link_rounded, size: 36, color: colorScheme.primary.withAlpha(120)),
+                const SizedBox(height: 12),
+                Text('Pega tus enlaces aquí',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                const SizedBox(height: 4),
+                Text('Copia y pega varios enlaces desde\nWhatsApp, Telegram, Notas o cualquier aplicación.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant.withAlpha(160))),
+                const SizedBox(height: 20),
+              ],
+              Padding(
+                padding: EdgeInsets.fromLTRB(12, hasText ? 8 : 0, 12, 8),
+                child: TextField(
+                  controller: _textController,
+                  maxLines: hasText ? 8 : 4,
+                  onChanged: (_) => _extractUrls(),
+                  decoration: InputDecoration(
+                    hintText: 'Pega aquí uno o varios enlaces...\n\nhttps://youtube.com/...\nhttps://tiktok.com/...\nhttps://vimeo.com/...',
+                    hintMaxLines: 5,
+                    border: InputBorder.none,
+                    filled: false,
                   ),
-                );
-              }),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _isProcessing ? null : _importAll,
-                icon: _isProcessing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.download_rounded),
-                label: Text(
-                  _isProcessing
-                      ? 'Importando...'
-                      : 'Importar ${_extractedUrls.length} enlace(s)',
                 ),
               ),
-            ] else if (_statusMessage.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                _statusMessage,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+              if (hasUrls)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Row(children: [
+                    Icon(Icons.check_circle, size: 16, color: Colors.green.shade600),
+                    const SizedBox(width: 6),
+                    Text('${_extractedUrls.length} enlaces detectados',
+                        style: TextStyle(color: Colors.green.shade700, fontSize: 13, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(Icons.info_outline, size: 18, color: colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text('Formato soportado', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                ]),
+                const SizedBox(height: 10),
+                Text('• Enlaces separados por líneas\n• Enlaces separados por comas\n• Grupos completos copiados desde WhatsApp\n• Listas de Telegram\n• Enlaces mezclados con texto',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant, height: 1.6)),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest.withAlpha(120),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('https://youtube.com/...\nhttps://youtube.com/...\nhttps://vimeo.com/...\nhttps://tiktok.com/...',
+                      style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: colorScheme.onSurfaceVariant)),
+                ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 20),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: _isComplete
+                ? Card(
+                    key: const ValueKey('done'),
+                    color: Colors.green.withAlpha(15),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(children: [
+                        Icon(Icons.check_circle_rounded, size: 40, color: Colors.green.shade600),
+                        const SizedBox(height: 8),
+                        Text('Importación completada', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 4),
+                        Text('$_importedCount enlaces registrados',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.green.shade700)),
+                      ]),
                     ),
-              ),
-            ],
-          ],
-        ),
+                  )
+                : _isProcessing
+                    ? Card(
+                        key: const ValueKey('loading'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(children: [
+                            const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                            const SizedBox(height: 12),
+                            Text(_statusMessage, style: Theme.of(context).textTheme.bodyMedium),
+                          ]),
+                        ),
+                      )
+                    : hasUrls
+                        ? FilledButton.icon(
+                            key: const ValueKey('import'),
+                            onPressed: _importAll,
+                            icon: const Icon(Icons.download_rounded),
+                            label: Text('Importar (${_extractedUrls.length} enlaces)'),
+                            style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18)),
+                          )
+                        : const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 40),
+        ]),
       ),
     );
-  }
-
-  IconData _getPlatformIcon(PlatformType platform) {
-    switch (platform) {
-      case PlatformType.tiktok:
-        return Icons.music_note;
-      case PlatformType.youtube:
-        return Icons.play_circle_filled;
-      case PlatformType.instagram:
-        return Icons.camera_alt;
-      case PlatformType.facebook:
-        return Icons.people;
-      case PlatformType.unknown:
-        return Icons.link;
-    }
   }
 }
