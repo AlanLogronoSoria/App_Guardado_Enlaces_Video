@@ -12,26 +12,20 @@ class CategoryRepository {
 
   Future<List<CategoryModel>> getAllCategories() async {
     final rows = await _db.getAllCategories();
-    return rows
-        .map((r) => CategoryModel(
-              id: r.id,
-              name: r.name,
-              createdAt: r.createdAt,
-            ))
-        .toList();
+    return rows.map(_toModel).toList();
   }
 
   Future<CategoryModel?> getCategoryByName(String name) async {
     final row = await _db.getCategoryByName(name);
     if (row == null) return null;
-    return CategoryModel(id: row.id, name: row.name, createdAt: row.createdAt);
+    return _toModel(row);
   }
 
-  Future<CategoryModel> createCategory(String name) async {
+  Future<CategoryModel> createCategory(String name,
+      {int? icon, String? color}) async {
     final existing = await _db.getCategoryByName(name);
     if (existing != null) {
-      return CategoryModel(
-          id: existing.id, name: existing.name, createdAt: existing.createdAt);
+      return _toModel(existing);
     }
 
     final now = DateTime.now();
@@ -40,34 +34,47 @@ class CategoryRepository {
     final entry = CategoryTableCompanion(
       id: Value(id),
       name: Value(name),
+      icon: Value.absentIfNull(icon),
+      color: Value.absentIfNull(color),
       createdAt: Value(now),
     );
 
     await _db.insertCategory(entry);
     _db.incrementModifications();
-    return CategoryModel(id: id, name: name, createdAt: now);
+    return CategoryModel(
+        id: id, name: name, icon: icon, color: color, createdAt: now);
   }
 
   Future<void> deleteCategory(String id) async {
     final category = await _db.getCategoryById(id);
     if (category == null) return;
 
-    await _db.renameCategoryForLinks(category.name, AppConstants.defaultCategory);
+    await _db.renameCategoryForLinks(
+        category.name, AppConstants.defaultCategory);
     await _db.deleteCategory(id);
     _db.incrementModifications();
   }
 
-  Future<void> updateCategory(String id, String newName) async {
-    final category = await _db.getCategoryById(id);
-    if (category == null) return;
+  Future<void> updateCategory(String id,
+      {String? name, int? icon, String? color}) async {
+    final cat = await _db.getCategoryById(id);
+    if (cat == null) return;
 
-    await _db.renameCategoryForLinks(category.name, newName);
-    await _db.updateCategoryName(id, newName);
+    if (name != null && name != cat.name) {
+      await _db.renameCategoryForLinks(cat.name, name);
+    }
+
+    await (_db.update(_db.categoryTable)..where((t) => t.id.equals(id))).write(
+      CategoryTableCompanion(
+        name: name != null ? Value(name) : const Value.absent(),
+        icon: Value.absentIfNull(icon),
+        color: Value.absentIfNull(color),
+      ),
+    );
     _db.incrementModifications();
   }
 
-  Future<void> mergeCategories(
-      String sourceId, String targetId) async {
+  Future<void> mergeCategories(String sourceId, String targetId) async {
     final source = await _db.getCategoryById(sourceId);
     final target = await _db.getCategoryById(targetId);
     if (source == null || target == null) return;
@@ -79,20 +86,19 @@ class CategoryRepository {
 
   Future<CategoryModel> ensureCategory(String name) async {
     final existing = await _db.getCategoryByName(name);
-    if (existing != null) {
-      return CategoryModel(
-          id: existing.id, name: existing.name, createdAt: existing.createdAt);
-    }
+    if (existing != null) return _toModel(existing);
     return createCategory(name);
   }
 
   Stream<List<CategoryModel>> watchAllCategories() {
-    return _db.watchAllCategories().map((rows) => rows
-        .map((r) => CategoryModel(
-              id: r.id,
-              name: r.name,
-              createdAt: r.createdAt,
-            ))
-        .toList());
+    return _db.watchAllCategories().map((rows) => rows.map(_toModel).toList());
   }
+
+  CategoryModel _toModel(CategoryTableData row) => CategoryModel(
+        id: row.id,
+        name: row.name,
+        icon: row.icon,
+        color: row.color,
+        createdAt: row.createdAt,
+      );
 }

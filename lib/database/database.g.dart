@@ -679,6 +679,24 @@ class $CategoryTableTable extends CategoryTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<int> icon = GeneratedColumn<int>(
+    'icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -691,7 +709,7 @@ class $CategoryTableTable extends CategoryTable
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, createdAt];
+  List<GeneratedColumn> get $columns => [id, name, icon, color, createdAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -716,6 +734,18 @@ class $CategoryTableTable extends CategoryTable
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -742,6 +772,14 @@ class $CategoryTableTable extends CategoryTable
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}icon'],
+      ),
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -759,10 +797,14 @@ class CategoryTableData extends DataClass
     implements Insertable<CategoryTableData> {
   final String id;
   final String name;
+  final int? icon;
+  final String? color;
   final DateTime createdAt;
   const CategoryTableData({
     required this.id,
     required this.name,
+    this.icon,
+    this.color,
     required this.createdAt,
   });
   @override
@@ -770,6 +812,12 @@ class CategoryTableData extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<int>(icon);
+    }
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<String>(color);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -778,6 +826,10 @@ class CategoryTableData extends DataClass
     return CategoryTableCompanion(
       id: Value(id),
       name: Value(name),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
       createdAt: Value(createdAt),
     );
   }
@@ -790,6 +842,8 @@ class CategoryTableData extends DataClass
     return CategoryTableData(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      icon: serializer.fromJson<int?>(json['icon']),
+      color: serializer.fromJson<String?>(json['color']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -799,20 +853,31 @@ class CategoryTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'icon': serializer.toJson<int?>(icon),
+      'color': serializer.toJson<String?>(color),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
 
-  CategoryTableData copyWith({String? id, String? name, DateTime? createdAt}) =>
-      CategoryTableData(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        createdAt: createdAt ?? this.createdAt,
-      );
+  CategoryTableData copyWith({
+    String? id,
+    String? name,
+    Value<int?> icon = const Value.absent(),
+    Value<String?> color = const Value.absent(),
+    DateTime? createdAt,
+  }) => CategoryTableData(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    icon: icon.present ? icon.value : this.icon,
+    color: color.present ? color.value : this.color,
+    createdAt: createdAt ?? this.createdAt,
+  );
   CategoryTableData copyWithCompanion(CategoryTableCompanion data) {
     return CategoryTableData(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      icon: data.icon.present ? data.icon.value : this.icon,
+      color: data.color.present ? data.color.value : this.color,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -822,36 +887,46 @@ class CategoryTableData extends DataClass
     return (StringBuffer('CategoryTableData(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, createdAt);
+  int get hashCode => Object.hash(id, name, icon, color, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CategoryTableData &&
           other.id == this.id &&
           other.name == this.name &&
+          other.icon == this.icon &&
+          other.color == this.color &&
           other.createdAt == this.createdAt);
 }
 
 class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
   final Value<String> id;
   final Value<String> name;
+  final Value<int?> icon;
+  final Value<String?> color;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const CategoryTableCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CategoryTableCompanion.insert({
     required String id,
     required String name,
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -860,12 +935,16 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
   static Insertable<CategoryTableData> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<int>? icon,
+    Expression<String>? color,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (icon != null) 'icon': icon,
+      if (color != null) 'color': color,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -874,12 +953,16 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
   CategoryTableCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
+    Value<int?>? icon,
+    Value<String?>? color,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
     return CategoryTableCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -893,6 +976,12 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<int>(icon.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -908,6 +997,8 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
     return (StringBuffer('CategoryTableCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1749,6 +1840,8 @@ typedef $$CategoryTableTableCreateCompanionBuilder =
     CategoryTableCompanion Function({
       required String id,
       required String name,
+      Value<int?> icon,
+      Value<String?> color,
       required DateTime createdAt,
       Value<int> rowid,
     });
@@ -1756,6 +1849,8 @@ typedef $$CategoryTableTableUpdateCompanionBuilder =
     CategoryTableCompanion Function({
       Value<String> id,
       Value<String> name,
+      Value<int?> icon,
+      Value<String?> color,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -1776,6 +1871,16 @@ class $$CategoryTableTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1804,6 +1909,16 @@ class $$CategoryTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1824,6 +1939,12 @@ class $$CategoryTableTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -1866,11 +1987,15 @@ class $$CategoryTableTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<int?> icon = const Value.absent(),
+                Value<String?> color = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoryTableCompanion(
                 id: id,
                 name: name,
+                icon: icon,
+                color: color,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -1878,11 +2003,15 @@ class $$CategoryTableTableTableManager
               ({
                 required String id,
                 required String name,
+                Value<int?> icon = const Value.absent(),
+                Value<String?> color = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => CategoryTableCompanion.insert(
                 id: id,
                 name: name,
+                icon: icon,
+                color: color,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTest(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -60,6 +60,12 @@ class AppDatabase extends _$AppDatabase {
           if (from < 4) {
             await customStatement(
                 'ALTER TABLE link_table ADD COLUMN source TEXT');
+          }
+          if (from < 5) {
+            await customStatement(
+                'ALTER TABLE category_table ADD COLUMN icon INTEGER');
+            await customStatement(
+                'ALTER TABLE category_table ADD COLUMN color TEXT');
           }
           print('[DB] onUpgrade completado');
         },
@@ -272,17 +278,24 @@ class AppDatabase extends _$AppDatabase {
     final count = await getCategoryCount();
     if (count > 0) return;
 
-    const defaults = [
-      'Fitness', 'Gaming', 'Programación', 'Skincare',
-      'Finanzas', 'Cocina', 'Educación',
+    final defaults = [
+      ('Fitness', 0xEB43, 'FF4CAF50'),
+      ('Gamer', 0xEA29, 'FF9C27B0'),
+      ('Programación', 0xE896, 'FF2196F3'),
+      ('Música', 0xE546, 'FFE91E63'),
+      ('Estudio', 0xE55C, 'FF3F51B5'),
+      ('Cocina', 0xE56C, 'FFFF9800'),
+      ('Películas', 0xE360, 'FFF44336'),
     ];
 
     final now = DateTime.now();
-    for (final name in defaults) {
+    for (final (name, icon, color) in defaults) {
       await into(categoryTable).insert(
         CategoryTableCompanion(
           id: Value(name.toLowerCase()),
           name: Value(name),
+          icon: Value(icon),
+          color: Value(color),
           createdAt: Value(now),
         ),
         mode: InsertMode.insertOrIgnore,

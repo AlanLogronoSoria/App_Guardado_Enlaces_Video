@@ -13,17 +13,45 @@ class CategoriesScreen extends ConsumerStatefulWidget {
 }
 
 class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
+  static const availableIcons = [
+    Icons.folder, Icons.fitness_center, Icons.sports_esports, Icons.code,
+    Icons.music_note, Icons.school, Icons.restaurant, Icons.movie,
+    Icons.camera_alt, Icons.photo, Icons.videocam, Icons.headphones,
+    Icons.book, Icons.lightbulb, Icons.star, Icons.favorite,
+    Icons.thumb_up, Icons.public, Icons.travel_explore, Icons.rocket_launch,
+    Icons.palette, Icons.shopping_cart, Icons.build, Icons.gamepad,
+    Icons.work, Icons.home, Icons.pets, Icons.mic,
+  ];
+
+  static const availableColors = [
+    'FF4CAF50', 'FF9C27B0', 'FF2196F3', 'FFE91E63', 'FF3F51B5',
+    'FFFF9800', 'FFF44336', 'FF009688', 'FF795548', 'FF607D8B',
+    'FFCDDC39', 'FFFF5722',
+  ];
+
+  Widget _buildPreview(int iconCode, String? colorHex, String name) {
+    final color = colorHex != null ? Color(int.parse(colorHex, radix: 16)) : null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(IconData(iconCode, fontFamily: 'MaterialIcons'), size: 18, color: color),
+        if (name.isNotEmpty) ...[
+          const SizedBox(width: 6),
+          Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: color)),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(allCategoriesProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Categorías'),
-      ),
+      appBar: AppBar(title: const Text('Categorías')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateCategoryDialog(context),
+        onPressed: () => _showCreateDialog(),
         icon: const Icon(Icons.add),
         label: const Text('Nueva categoría'),
       ),
@@ -36,307 +64,204 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.folder_off,
-                      size: 64,
+                  Icon(Icons.folder_off, size: 64,
                       color: colorScheme.onSurfaceVariant.withAlpha(100)),
                   const SizedBox(height: 16),
-                  Text(
-                    'No hay categorías',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
+                  Text('No hay categorías',
+                      style: Theme.of(context).textTheme.titleLarge
+                          ?.copyWith(color: colorScheme.onSurfaceVariant)),
                 ],
               ),
             );
           }
-
           return ListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
             itemCount: categories.length,
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              return _buildCategoryItem(context, category);
-            },
+            itemBuilder: (context, index) => _buildItem(categories[index]),
           );
         },
       ),
     );
   }
 
-  Widget _buildCategoryItem(BuildContext context, CategoryModel category) {
+  Widget _buildItem(CategoryModel category) {
     final colorScheme = Theme.of(context).colorScheme;
+    final catColor = category.displayColor ?? colorScheme.primary;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: colorScheme.primaryContainer,
-          child: Icon(
-            Icons.folder_rounded,
-            color: colorScheme.onPrimaryContainer,
-            size: 20,
-          ),
+          backgroundColor: catColor.withAlpha(30),
+          child: Icon(category.iconData, color: catColor, size: 20),
         ),
-        title: Text(
-          category.name,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        title: Text(category.name,
+            style: Theme.of(context).textTheme.titleMedium),
         trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            switch (value) {
-              case 'edit':
-                _showEditCategoryDialog(context, category);
-                break;
-              case 'merge':
-                _showMergeCategoryDialog(context, category);
-                break;
-              case 'delete':
-                _confirmDeleteCategory(context, category);
-                break;
+          onSelected: (v) {
+            switch (v) {
+              case 'edit': _showEditDialog(category); break;
+              case 'merge': _showMergeDialog(category); break;
+              case 'delete': _confirmDelete(category); break;
             }
           },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit, size: 20),
-                  SizedBox(width: 12),
-                  Text('Editar'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'merge',
-              child: Row(
-                children: [
-                  Icon(Icons.merge, size: 20),
-                  SizedBox(width: 12),
-                  Text('Fusionar'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, size: 20, color: Colors.red),
-                  SizedBox(width: 12),
-                  Text('Eliminar', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
+          itemBuilder: (ctx) => [
+            const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 20), SizedBox(width: 12), Text('Editar')])),
+            const PopupMenuItem(value: 'merge', child: Row(children: [Icon(Icons.merge, size: 20), SizedBox(width: 12), Text('Fusionar')])),
+            const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 20, color: Colors.red), SizedBox(width: 12), Text('Eliminar', style: TextStyle(color: Colors.red))])),
           ],
         ),
       ),
     );
   }
 
-  void _showCreateCategoryDialog(BuildContext context) {
-    final controller = TextEditingController();
+  void _showCreateDialog() {
+    final nameCtrl = TextEditingController();
+    int icon = CategoryModel.defaultIconCodePoint;
+    String? color;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nueva categoría'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: AppConstants.maxCategoryNameLength,
-          decoration: const InputDecoration(
-            hintText: 'Nombre de la categoría',
-          ),
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              ref
-                  .read(categoryRepositoryProvider)
-                  .createCategory(value.trim());
-              Navigator.pop(ctx);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                ref
-                    .read(categoryRepositoryProvider)
-                    .createCategory(name);
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: const Text('Nueva categoría'),
+          content: SizedBox(width: 320, child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(controller: nameCtrl, autofocus: true, maxLength: 50, decoration: const InputDecoration(hintText: 'Nombre')),
+              const SizedBox(height: 16),
+              Row(children: [Text('Icono', style: Theme.of(context).textTheme.labelLarge), const Spacer(), _buildPreview(icon, color, nameCtrl.text)]),
+              const SizedBox(height: 8),
+              Wrap(spacing: 4, runSpacing: 4, children: availableIcons.map((ic) => GestureDetector(
+                onTap: () => setD(() => icon = ic.codePoint),
+                child: Container(width: 40, height: 40, decoration: BoxDecoration(
+                  color: icon == ic.codePoint ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ), child: Icon(ic, size: 22)),
+              )).toList()),
+              const SizedBox(height: 16),
+              Text('Color', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                GestureDetector(onTap: () => setD(() => color = null), child: Container(width: 32, height: 32, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color == null ? Theme.of(context).colorScheme.primary : Colors.grey, width: color == null ? 2.5 : 1)), child: const Icon(Icons.block, size: 20))),
+                ...availableColors.map((c) => GestureDetector(onTap: () => setD(() => color = c), child: Container(width: 32, height: 32, decoration: BoxDecoration(shape: BoxShape.circle, color: Color(int.parse(c, radix: 16)), border: Border.all(color: color == c ? Colors.white : Colors.transparent, width: 2.5))))),
+              ]),
+            ]),
+          )),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(onPressed: () {
+              final n = nameCtrl.text.trim();
+              if (n.isNotEmpty) {
+                ref.read(categoryRepositoryProvider).createCategory(n, icon: icon, color: color);
                 Navigator.pop(ctx);
               }
-            },
-            child: const Text('Crear'),
-          ),
-        ],
+            }, child: const Text('Crear')),
+          ],
+        ),
       ),
     );
   }
 
-  void _showEditCategoryDialog(
-      BuildContext context, CategoryModel category) {
-    final controller = TextEditingController(text: category.name);
+  void _showEditDialog(CategoryModel category) {
+    final nameCtrl = TextEditingController(text: category.name);
+    int icon = category.icon ?? CategoryModel.defaultIconCodePoint;
+    String? color = category.color;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Editar categoría'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: AppConstants.maxCategoryNameLength,
-          decoration: const InputDecoration(
-            hintText: 'Nuevo nombre',
-          ),
-          onSubmitted: (value) {
-            if (value.trim().isNotEmpty && value.trim() != category.name) {
-              ref
-                  .read(categoryRepositoryProvider)
-                  .updateCategory(category.id, value.trim());
-              Navigator.pop(ctx);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isNotEmpty && name != category.name) {
-                ref
-                    .read(categoryRepositoryProvider)
-                    .updateCategory(category.id, name);
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: const Text('Editar categoría'),
+          content: SizedBox(width: 320, child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(controller: nameCtrl, autofocus: true, maxLength: 50, decoration: const InputDecoration(hintText: 'Nombre')),
+              const SizedBox(height: 16),
+              Row(children: [Text('Icono', style: Theme.of(context).textTheme.labelLarge), const Spacer(), _buildPreview(icon, color, nameCtrl.text)]),
+              const SizedBox(height: 8),
+              Wrap(spacing: 4, runSpacing: 4, children: availableIcons.map((ic) => GestureDetector(
+                onTap: () => setD(() => icon = ic.codePoint),
+                child: Container(width: 40, height: 40, decoration: BoxDecoration(
+                  color: icon == ic.codePoint ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ), child: Icon(ic, size: 22)),
+              )).toList()),
+              const SizedBox(height: 16),
+              Text('Color', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                GestureDetector(onTap: () => setD(() => color = null), child: Container(width: 32, height: 32, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color == null ? Theme.of(context).colorScheme.primary : Colors.grey, width: color == null ? 2.5 : 1)), child: const Icon(Icons.block, size: 20))),
+                ...availableColors.map((c) => GestureDetector(onTap: () => setD(() => color = c), child: Container(width: 32, height: 32, decoration: BoxDecoration(shape: BoxShape.circle, color: Color(int.parse(c, radix: 16)), border: Border.all(color: color == c ? Colors.white : Colors.transparent, width: 2.5))))),
+              ]),
+            ]),
+          )),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(onPressed: () {
+              final n = nameCtrl.text.trim();
+              if (n.isNotEmpty) {
+                ref.read(categoryRepositoryProvider).updateCategory(category.id, name: n, icon: icon, color: color);
                 Navigator.pop(ctx);
               }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
+            }, child: const Text('Guardar')),
+          ],
+        ),
       ),
     );
   }
 
-  void _showMergeCategoryDialog(
-      BuildContext context, CategoryModel source) {
+  void _showMergeDialog(CategoryModel source) {
     final categoriesAsync = ref.watch(allCategoriesProvider);
-    final otherCategories = categoriesAsync.valueOrNull
-            ?.where((c) => c.id != source.id)
-            .toList() ??
-        [];
-
-    if (otherCategories.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay otras categorías para fusionar.')),
-      );
+    final others = categoriesAsync.valueOrNull?.where((c) => c.id != source.id).toList() ?? [];
+    if (others.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No hay otras categorías para fusionar.')));
       return;
     }
-
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Fusionar "${source.name}" con...'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: otherCategories.length,
-            itemBuilder: (context, index) {
-              final target = otherCategories[index];
-              return ListTile(
-                leading: const Icon(Icons.folder),
-                title: Text(target.name),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _confirmMerge(context, source, target);
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-        ],
+        content: SizedBox(width: double.maxFinite, child: ListView.builder(
+          shrinkWrap: true, itemCount: others.length,
+          itemBuilder: (_, i) => ListTile(leading: const Icon(Icons.folder), title: Text(others[i].name), onTap: () { Navigator.pop(ctx); _confirmMerge(source, others[i]); }),
+        )),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar'))],
       ),
     );
   }
 
-  void _confirmMerge(BuildContext context, CategoryModel source,
-      CategoryModel target) {
+  void _confirmMerge(CategoryModel source, CategoryModel target) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmar fusión'),
-        content: Text(
-          'Todos los enlaces de "${source.name}" se moverán a '
-          '"${target.name}" y la categoría "${source.name}" será eliminada. '
-          '¿Continuar?',
-        ),
+        content: Text('Todos los enlaces de "${source.name}" se moverán a "${target.name}" y la categoría será eliminada. ¿Continuar?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              ref
-                  .read(categoryRepositoryProvider)
-                  .mergeCategories(source.id, target.id);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Fusionar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(onPressed: () {
+            ref.read(categoryRepositoryProvider).mergeCategories(source.id, target.id);
+            Navigator.pop(ctx);
+          }, child: const Text('Fusionar')),
         ],
       ),
     );
   }
 
-  void _confirmDeleteCategory(
-      BuildContext context, CategoryModel category) {
+  void _confirmDelete(CategoryModel category) {
     if (category.name == AppConstants.defaultCategory) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('No se puede eliminar la categoría General.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se puede eliminar la categoría General.')));
       return;
     }
-
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar categoría'),
-        content: Text(
-          'Los enlaces de "${category.name}" se moverán a '
-          '"${AppConstants.defaultCategory}". ¿Eliminar?',
-        ),
+        content: Text('Los enlaces de "${category.name}" se moverán a "${AppConstants.defaultCategory}". ¿Eliminar?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            onPressed: () {
-              ref
-                  .read(categoryRepositoryProvider)
-                  .deleteCategory(category.id);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Eliminar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error), onPressed: () {
+            ref.read(categoryRepositoryProvider).deleteCategory(category.id);
+            Navigator.pop(ctx);
+          }, child: const Text('Eliminar')),
         ],
       ),
     );
