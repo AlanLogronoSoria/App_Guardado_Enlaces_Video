@@ -129,6 +129,7 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
           }
 
           return SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -140,10 +141,45 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
                     children: [
                       if (_isEditing)
                         _buildEditableFields(context, link, categoriesAsync)
-                      else
-                        _buildDisplayFields(context, link),
-                      const SizedBox(height: 20),
-                      _buildActionButtons(context, link),
+                      else ...[
+                        _buildMetaChips(context, link),
+                        const SizedBox(height: 16),
+                        _buildTitle(context, link),
+                        if (link.notes != null && link.notes!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          _buildNotesCard(context, link),
+                        const SizedBox(height: 12),
+                        OutlinedButton.icon(
+                          onPressed: () => _confirmDelete(context, link),
+                          icon: Icon(Icons.delete_outline, color: colorScheme.error),
+                          label: Text('Eliminar', style: TextStyle(color: colorScheme.error)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(color: colorScheme.error.withAlpha(100)),
+                          ),
+                        ),
+                      ],
+                        const SizedBox(height: 20),
+                        _buildOpenButton(context, link),
+                        const SizedBox(height: 16),
+                        _buildQuickActions(context, link),
+                        const SizedBox(height: 20),
+                        _buildInfoCards(context, link),
+                        const SizedBox(height: 16),
+                        OutlinedButton.icon(
+                          onPressed: () => _confirmDelete(context, link),
+                          icon: Icon(Icons.delete_outline, color: colorScheme.error),
+                          label: Text('Eliminar', style: TextStyle(color: colorScheme.error)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(color: colorScheme.error.withAlpha(100)),
+                          ),
+                        ),
+                      ],
+                      if (_isEditing) ...[
+                        const SizedBox(height: 20),
+                        _buildActionButtons(context, link),
+                      ],
                     ],
                   ),
                 ),
@@ -264,62 +300,157 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
     );
   }
 
-  Widget _buildDisplayFields(BuildContext context, LinkModel link) {
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _buildMetaChips(BuildContext context, LinkModel link) {
+    final platform = _getPlatform(link.platform);
+    final relativeDate = _relativeDate(link.createdAt);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          link.title,
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Icon(Icons.folder_outlined,
-                size: 18, color: colorScheme.onSurfaceVariant),
-            const SizedBox(width: 6),
-            Text(
-              link.category,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(Icons.calendar_today,
-                size: 18, color: colorScheme.onSurfaceVariant),
-            const SizedBox(width: 6),
-            Text(
-              DateFormat('dd/MM/yyyy').format(link.createdAt),
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
-        if (link.notes != null && link.notes!.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          Text(
-            'Notas',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: colorScheme.primary,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            link.notes!,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                ),
-          ),
-        ],
-      ],
+    return Wrap(spacing: 8, runSpacing: 8, children: [
+      _chip(context, _platformIconData(platform), platform.displayName),
+      _chip(context, Icons.folder_rounded, link.category),
+      _chip(context, Icons.schedule, relativeDate),
+    ]);
+  }
+
+  Widget _chip(BuildContext context, IconData icon, String label) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorScheme.outlineVariant.withAlpha(80)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 14, color: colorScheme.onSurfaceVariant),
+        const SizedBox(width: 5),
+        Text(label, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+      ]),
     );
+  }
+
+  Widget _buildTitle(BuildContext context, LinkModel link) {
+    return Text(link.title,
+        style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, height: 1.25));
+  }
+
+  Widget _buildOpenButton(BuildContext context, LinkModel link) {
+    return FilledButton.icon(
+      onPressed: () async {
+        final url = link.url;
+        if (url.isEmpty) { _showLinkError(context, 'No hay enlace para abrir.'); return; }
+        final fixedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : 'https://$url';
+        Uri uri;
+        try { uri = Uri.parse(fixedUrl); if (!uri.hasScheme || uri.host.isEmpty) { _showLinkError(context, 'El enlace no es válido.'); return; } } catch (_) { _showLinkError(context, 'El enlace no es válido.'); return; }
+        try {
+          if (await canLaunchUrl(uri)) { await launchUrl(uri, mode: LaunchMode.externalApplication); }
+          else { _showLinkError(context, 'No se pudo abrir el enlace.'); }
+        } catch (_) { _showLinkError(context, 'Error al intentar abrir el enlace.'); }
+      },
+      icon: const Icon(Icons.play_circle_filled, size: 22),
+      label: const Text('Abrir video'),
+      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, LinkModel link) {
+    return Row(children: [
+      Expanded(child: _buildActionCard(context, Icons.favorite, link.favorite ? 'Favorito' : 'Guardar',
+          link.favorite ? Colors.red : Theme.of(context).colorScheme.primary, () {
+        ref.read(linkRepositoryProvider).toggleFavorite(link.id);
+        ref.invalidate(linkByIdProvider(widget.linkId));
+        ref.invalidate(allLinksProvider);
+      })),
+      const SizedBox(width: 12),
+      Expanded(child: _buildActionCard(context, Icons.share, 'Compartir', Theme.of(context).colorScheme.primary, () => Share.share('${link.title}\n${link.url}'))),
+      const SizedBox(width: 12),
+      Expanded(child: _buildActionCard(context, Icons.copy, 'Copiar', Theme.of(context).colorScheme.primary, () {
+        Clipboard.setData(ClipboardData(text: link.url));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Enlace copiado'), behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), duration: const Duration(seconds: 2)));
+      })),
+    ]);
+  }
+
+  Widget _buildActionCard(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
+    return Material(
+      color: color.withAlpha(15),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          child: Column(children: [
+            Icon(icon, size: 22, color: color),
+            const SizedBox(height: 6),
+            Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600, color: color)),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotesCard(BuildContext context, LinkModel link) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(Icons.edit_note, size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('Notas personales', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+          ]),
+          const SizedBox(height: 8),
+          Text(link.notes!, style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildInfoCards(BuildContext context, LinkModel link) {
+    final host = Uri.tryParse(link.url)?.host ?? link.url;
+    final displayUrl = host.length > 30 ? '${host.substring(0, 30)}...' : host;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
+          _infoRow(context, Icons.calendar_today, 'Fecha', DateFormat('dd MMM yyyy').format(link.createdAt)),
+          const Divider(height: 20),
+          _infoRow(context, Icons.folder_rounded, 'Categoría', link.category),
+          const Divider(height: 20),
+          _infoRow(context, Icons.link, 'Origen', displayUrl),
+        ]),
+      ),
+    );
+  }
+
+  Widget _infoRow(BuildContext context, IconData icon, String label, String value) {
+    return Row(children: [
+      Icon(icon, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+      const SizedBox(width: 10),
+      Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      const Spacer(),
+      Flexible(child: Text(value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
+    ]);
+  }
+
+  String _relativeDate(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inDays == 0) return 'Hoy';
+    if (diff.inDays == 1) return 'Ayer';
+    if (diff.inDays < 7) return 'Hace ${diff.inDays} días';
+    if (diff.inDays < 30) return 'Hace ${(diff.inDays / 7).floor()} semanas';
+    return DateFormat('dd MMM yyyy').format(date);
+  }
+
+  IconData _platformIconData(PlatformType platform) {
+    switch (platform) {
+      case PlatformType.tiktok: return Icons.music_note;
+      case PlatformType.youtube: return Icons.play_circle_filled;
+      case PlatformType.instagram: return Icons.camera_alt;
+      case PlatformType.facebook: return Icons.people;
+      case PlatformType.unknown: return Icons.link;
+    }
   }
 
   Widget _buildEditableFields(BuildContext context, LinkModel link,
