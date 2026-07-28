@@ -149,11 +149,11 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
                           const SizedBox(height: 16),
                           _buildNotesCard(context, link),
                         ],
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
                         _buildOpenButton(context, link),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 20),
                         _buildQuickActions(context, link),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
                         _buildInfoCards(context, link),
                         const SizedBox(height: 18),
                         OutlinedButton.icon(
@@ -161,8 +161,9 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
                           icon: Icon(Icons.delete_outline, color: colorScheme.error),
                           label: Text('Eliminar', style: TextStyle(color: colorScheme.error)),
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            minimumSize: const Size(double.infinity, 50),
                             side: BorderSide(color: colorScheme.error.withAlpha(100)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                         ),
                       ],
@@ -324,56 +325,66 @@ class _LinkDetailScreenState extends ConsumerState<LinkDetailScreen> {
   }
 
   Widget _buildOpenButton(BuildContext context, LinkModel link) {
-    return FilledButton.icon(
-      onPressed: () async {
-        final url = link.url;
-        if (url.isEmpty) { _showLinkError(context, 'No hay enlace para abrir.'); return; }
-        final fixedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : 'https://$url';
-        Uri uri;
-        try { uri = Uri.parse(fixedUrl); if (!uri.hasScheme || uri.host.isEmpty) { _showLinkError(context, 'El enlace no es válido.'); return; } } catch (_) { _showLinkError(context, 'El enlace no es válido.'); return; }
-        try {
-          if (await canLaunchUrl(uri)) { await launchUrl(uri, mode: LaunchMode.externalApplication); }
-          else { _showLinkError(context, 'No se pudo abrir el enlace.'); }
-        } catch (_) { _showLinkError(context, 'Error al intentar abrir el enlace.'); }
-      },
-      icon: const Icon(Icons.play_circle_filled, size: 22),
-      label: const Text('Abrir video'),
-      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: FilledButton.icon(
+        onPressed: () async {
+          final url = link.url;
+          if (url.isEmpty) { _showLinkError(context, 'No hay enlace para abrir.'); return; }
+          final fixedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : 'https://$url';
+          Uri uri;
+          try { uri = Uri.parse(fixedUrl); if (!uri.hasScheme || uri.host.isEmpty) { _showLinkError(context, 'El enlace no es válido.'); return; } } catch (_) { _showLinkError(context, 'El enlace no es válido.'); return; }
+          try {
+            if (await canLaunchUrl(uri)) { await launchUrl(uri, mode: LaunchMode.externalApplication); }
+            else { _showLinkError(context, 'No se pudo abrir el enlace.'); }
+          } catch (_) { _showLinkError(context, 'Error al intentar abrir el enlace.'); }
+        },
+        icon: const Icon(Icons.play_circle_filled, size: 22),
+        label: const Text('Abrir video'),
+        style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+      ),
     );
   }
 
   Widget _buildQuickActions(BuildContext context, LinkModel link) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(children: [
-      Expanded(child: _buildActionCard(context, Icons.favorite, link.favorite ? 'Favorito' : 'Guardar',
-          link.favorite ? Colors.red : Theme.of(context).colorScheme.primary, () {
+      Expanded(child: _actionCard(context, link.favorite ? Icons.favorite : Icons.favorite_border, 'Favorito', link.favorite ? Colors.red : colorScheme.primary, () {
         ref.read(linkRepositoryProvider).toggleFavorite(link.id);
         ref.invalidate(linkByIdProvider(widget.linkId));
         ref.invalidate(allLinksProvider);
       })),
       const SizedBox(width: 12),
-      Expanded(child: _buildActionCard(context, Icons.share, 'Compartir', Theme.of(context).colorScheme.primary, () => Share.share('${link.title}\n${link.url}'))),
+      Expanded(child: _actionCard(context, Icons.share, 'Compartir', colorScheme.primary, () => Share.share('${link.title}\n${link.url}'))),
       const SizedBox(width: 12),
-      Expanded(child: _buildActionCard(context, Icons.copy, 'Copiar', Theme.of(context).colorScheme.primary, () {
+      Expanded(child: _actionCard(context, Icons.copy, 'Copiar', colorScheme.primary, () {
         Clipboard.setData(ClipboardData(text: link.url));
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Enlace copiado'), behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), duration: const Duration(seconds: 2)));
       })),
     ]);
   }
 
-  Widget _buildActionCard(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
-    return Material(
-      color: color.withAlpha(15),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          child: Column(children: [
-            Icon(icon, size: 22, color: color),
-            const SizedBox(height: 6),
-            Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600, color: color)),
-          ]),
+  Widget _actionCard(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
+    return SizedBox(
+      height: 88,
+      child: Material(
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 24, color: color),
+                const SizedBox(height: 8),
+                Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600, color: color), textAlign: TextAlign.center),
+              ],
+            ),
+          ),
         ),
       ),
     );
