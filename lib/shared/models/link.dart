@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../core/constants/category_icons.dart';
 
 class LinkModel {
   final String id;
@@ -103,12 +104,9 @@ class LinkModel {
 class CategoryModel {
   final String id;
   final String name;
-  final int? icon;
+  final String? icon;
   final String? color;
   final DateTime createdAt;
-
-  static const int defaultIconCodePoint = 0xE2C7;
-  static const String defaultColor = 'FF6750A4';
 
   CategoryModel({
     required this.id,
@@ -118,13 +116,13 @@ class CategoryModel {
     required this.createdAt,
   });
 
-  IconData get iconData => IconData(icon ?? defaultIconCodePoint, fontFamily: 'MaterialIcons');
+  IconData get iconData => iconDataFromName(icon);
   Color? get displayColor => color != null ? Color(int.parse(color!, radix: 16)) : null;
 
   CategoryModel copyWith({
     String? id,
     String? name,
-    int? icon,
+    String? icon,
     String? color,
     DateTime? createdAt,
   }) {
@@ -151,7 +149,7 @@ class CategoryModel {
     return CategoryModel(
       id: map['id'] as String,
       name: map['name'] as String,
-      icon: map['icon'] as int?,
+      icon: map['icon'] as String?,
       color: map['color'] as String?,
       createdAt: _parseDate(map['created_at'] ?? map['createdAt']),
     );

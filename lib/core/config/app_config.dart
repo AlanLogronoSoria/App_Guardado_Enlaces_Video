@@ -19,4 +19,6 @@ class AppConfig {
   static const String addLinkRoute = '/add-link';
   static const String backupsRoute = '/backups';
   static const String shareHistoryRoute = '/share-history';
+
+  static const String msClientId = 'YOUR_AZURE_CLIENT_ID';
 }

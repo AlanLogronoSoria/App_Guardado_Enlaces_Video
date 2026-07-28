@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTest(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -31,6 +31,8 @@ class AppDatabase extends _$AppDatabase {
               'attempt_count INTEGER NOT NULL DEFAULT 0, '
               'is_running INTEGER NOT NULL DEFAULT 0'
               ')');
+          await customStatement(
+              "UPDATE category_table SET icon = 'folder' WHERE typeof(icon) = 'integer'");
           print('[DB] backup_status_table creada o ya existente');
         },
         onUpgrade: (m, from, to) async {
@@ -279,22 +281,22 @@ class AppDatabase extends _$AppDatabase {
     if (count > 0) return;
 
     final defaults = [
-      ('Fitness', 0xEB43, 'FF4CAF50'),
-      ('Gamer', 0xEA29, 'FF9C27B0'),
-      ('Programación', 0xE896, 'FF2196F3'),
-      ('Música', 0xE546, 'FFE91E63'),
-      ('Estudio', 0xE55C, 'FF3F51B5'),
-      ('Cocina', 0xE56C, 'FFFF9800'),
-      ('Películas', 0xE360, 'FFF44336'),
+      ('Fitness', 'fitness_center', 'FF4CAF50'),
+      ('Gamer', 'sports_esports', 'FF9C27B0'),
+      ('Programación', 'code', 'FF2196F3'),
+      ('Música', 'music_note', 'FFE91E63'),
+      ('Estudio', 'school', 'FF3F51B5'),
+      ('Cocina', 'restaurant', 'FFFF9800'),
+      ('Películas', 'movie', 'FFF44336'),
     ];
 
     final now = DateTime.now();
-    for (final (name, icon, color) in defaults) {
+    for (final (name, iconName, color) in defaults) {
       await into(categoryTable).insert(
         CategoryTableCompanion(
           id: Value(name.toLowerCase()),
           name: Value(name),
-          icon: Value(icon),
+          icon: Value(iconName),
           color: Value(color),
           createdAt: Value(now),
         ),

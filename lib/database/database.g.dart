@@ -681,11 +681,11 @@ class $CategoryTableTable extends CategoryTable
   );
   static const VerificationMeta _iconMeta = const VerificationMeta('icon');
   @override
-  late final GeneratedColumn<int> icon = GeneratedColumn<int>(
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
     'icon',
     aliasedName,
     true,
-    type: DriftSqlType.int,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _colorMeta = const VerificationMeta('color');
@@ -773,7 +773,7 @@ class $CategoryTableTable extends CategoryTable
         data['${effectivePrefix}name'],
       )!,
       icon: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.string,
         data['${effectivePrefix}icon'],
       ),
       color: attachedDatabase.typeMapping.read(
@@ -797,7 +797,7 @@ class CategoryTableData extends DataClass
     implements Insertable<CategoryTableData> {
   final String id;
   final String name;
-  final int? icon;
+  final String? icon;
   final String? color;
   final DateTime createdAt;
   const CategoryTableData({
@@ -813,7 +813,7 @@ class CategoryTableData extends DataClass
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || icon != null) {
-      map['icon'] = Variable<int>(icon);
+      map['icon'] = Variable<String>(icon);
     }
     if (!nullToAbsent || color != null) {
       map['color'] = Variable<String>(color);
@@ -842,7 +842,7 @@ class CategoryTableData extends DataClass
     return CategoryTableData(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      icon: serializer.fromJson<int?>(json['icon']),
+      icon: serializer.fromJson<String?>(json['icon']),
       color: serializer.fromJson<String?>(json['color']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -853,7 +853,7 @@ class CategoryTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
-      'icon': serializer.toJson<int?>(icon),
+      'icon': serializer.toJson<String?>(icon),
       'color': serializer.toJson<String?>(color),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -862,7 +862,7 @@ class CategoryTableData extends DataClass
   CategoryTableData copyWith({
     String? id,
     String? name,
-    Value<int?> icon = const Value.absent(),
+    Value<String?> icon = const Value.absent(),
     Value<String?> color = const Value.absent(),
     DateTime? createdAt,
   }) => CategoryTableData(
@@ -910,7 +910,7 @@ class CategoryTableData extends DataClass
 class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
   final Value<String> id;
   final Value<String> name;
-  final Value<int?> icon;
+  final Value<String?> icon;
   final Value<String?> color;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -935,7 +935,7 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
   static Insertable<CategoryTableData> custom({
     Expression<String>? id,
     Expression<String>? name,
-    Expression<int>? icon,
+    Expression<String>? icon,
     Expression<String>? color,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -953,7 +953,7 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
   CategoryTableCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
-    Value<int?>? icon,
+    Value<String?>? icon,
     Value<String?>? color,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -978,7 +978,7 @@ class CategoryTableCompanion extends UpdateCompanion<CategoryTableData> {
       map['name'] = Variable<String>(name.value);
     }
     if (icon.present) {
-      map['icon'] = Variable<int>(icon.value);
+      map['icon'] = Variable<String>(icon.value);
     }
     if (color.present) {
       map['color'] = Variable<String>(color.value);
@@ -1840,7 +1840,7 @@ typedef $$CategoryTableTableCreateCompanionBuilder =
     CategoryTableCompanion Function({
       required String id,
       required String name,
-      Value<int?> icon,
+      Value<String?> icon,
       Value<String?> color,
       required DateTime createdAt,
       Value<int> rowid,
@@ -1849,7 +1849,7 @@ typedef $$CategoryTableTableUpdateCompanionBuilder =
     CategoryTableCompanion Function({
       Value<String> id,
       Value<String> name,
-      Value<int?> icon,
+      Value<String?> icon,
       Value<String?> color,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -1874,7 +1874,7 @@ class $$CategoryTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get icon => $composableBuilder(
+  ColumnFilters<String> get icon => $composableBuilder(
     column: $table.icon,
     builder: (column) => ColumnFilters(column),
   );
@@ -1909,7 +1909,7 @@ class $$CategoryTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get icon => $composableBuilder(
+  ColumnOrderings<String> get icon => $composableBuilder(
     column: $table.icon,
     builder: (column) => ColumnOrderings(column),
   );
@@ -1940,7 +1940,7 @@ class $$CategoryTableTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
-  GeneratedColumn<int> get icon =>
+  GeneratedColumn<String> get icon =>
       $composableBuilder(column: $table.icon, builder: (column) => column);
 
   GeneratedColumn<String> get color =>
@@ -1987,7 +1987,7 @@ class $$CategoryTableTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-                Value<int?> icon = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
                 Value<String?> color = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -2003,7 +2003,7 @@ class $$CategoryTableTableTableManager
               ({
                 required String id,
                 required String name,
-                Value<int?> icon = const Value.absent(),
+                Value<String?> icon = const Value.absent(),
                 Value<String?> color = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),

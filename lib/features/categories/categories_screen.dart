@@ -4,6 +4,7 @@ import '../../shared/models/link.dart';
 import '../../shared/providers/category_providers.dart';
 import '../../shared/providers/core_providers.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/constants/category_icons.dart';
 
 class CategoriesScreen extends ConsumerStatefulWidget {
   const CategoriesScreen({super.key});
@@ -13,28 +14,19 @@ class CategoriesScreen extends ConsumerStatefulWidget {
 }
 
 class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
-  static const availableIcons = [
-    Icons.folder, Icons.fitness_center, Icons.sports_esports, Icons.code,
-    Icons.music_note, Icons.school, Icons.restaurant, Icons.movie,
-    Icons.camera_alt, Icons.photo, Icons.videocam, Icons.headphones,
-    Icons.book, Icons.lightbulb, Icons.star, Icons.favorite,
-    Icons.thumb_up, Icons.public, Icons.travel_explore, Icons.rocket_launch,
-    Icons.palette, Icons.shopping_cart, Icons.build, Icons.gamepad,
-    Icons.work, Icons.home, Icons.pets, Icons.mic,
-  ];
-
   static const availableColors = [
     'FF4CAF50', 'FF9C27B0', 'FF2196F3', 'FFE91E63', 'FF3F51B5',
     'FFFF9800', 'FFF44336', 'FF009688', 'FF795548', 'FF607D8B',
     'FFCDDC39', 'FFFF5722',
   ];
 
-  Widget _buildPreview(int iconCode, String? colorHex, String name) {
+  Widget _buildPreview(String? iconName, String? colorHex, String name) {
     final color = colorHex != null ? Color(int.parse(colorHex, radix: 16)) : null;
+    final icon = iconDataFromName(iconName);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(IconData(iconCode, fontFamily: 'MaterialIcons'), size: 18, color: color),
+        Icon(icon, size: 18, color: color),
         if (name.isNotEmpty) ...[
           const SizedBox(width: 6),
           Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: color)),
@@ -117,7 +109,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
 
   void _showCreateDialog() {
     final nameCtrl = TextEditingController();
-    int icon = CategoryModel.defaultIconCodePoint;
+    String? icon = defaultCategoryIconName;
     String? color;
 
     showDialog(
@@ -131,13 +123,15 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               const SizedBox(height: 16),
               Row(children: [Text('Icono', style: Theme.of(context).textTheme.labelLarge), const Spacer(), _buildPreview(icon, color, nameCtrl.text)]),
               const SizedBox(height: 8),
-              Wrap(spacing: 4, runSpacing: 4, children: availableIcons.map((ic) => GestureDetector(
-                onTap: () => setD(() => icon = ic.codePoint),
+              Wrap(spacing: 4, runSpacing: 4, children: availableIconNames.map((name) {
+                final ic = categoryIcons[name]!;
+                return GestureDetector(
+                onTap: () => setD(() => icon = name),
                 child: Container(width: 40, height: 40, decoration: BoxDecoration(
-                  color: icon == ic.codePoint ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
+                  color: icon == name ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ), child: Icon(ic, size: 22)),
-              )).toList()),
+              );}).toList()),
               const SizedBox(height: 16),
               Text('Color', style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 8),
@@ -164,7 +158,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
 
   void _showEditDialog(CategoryModel category) {
     final nameCtrl = TextEditingController(text: category.name);
-    int icon = category.icon ?? CategoryModel.defaultIconCodePoint;
+    String? icon = category.icon ?? defaultCategoryIconName;
     String? color = category.color;
 
     showDialog(
@@ -178,13 +172,15 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
               const SizedBox(height: 16),
               Row(children: [Text('Icono', style: Theme.of(context).textTheme.labelLarge), const Spacer(), _buildPreview(icon, color, nameCtrl.text)]),
               const SizedBox(height: 8),
-              Wrap(spacing: 4, runSpacing: 4, children: availableIcons.map((ic) => GestureDetector(
-                onTap: () => setD(() => icon = ic.codePoint),
+              Wrap(spacing: 4, runSpacing: 4, children: availableIconNames.map((name) {
+                final ic = categoryIcons[name]!;
+                return GestureDetector(
+                onTap: () => setD(() => icon = name),
                 child: Container(width: 40, height: 40, decoration: BoxDecoration(
-                  color: icon == ic.codePoint ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
+                  color: icon == name ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ), child: Icon(ic, size: 22)),
-              )).toList()),
+              );}).toList()),
               const SizedBox(height: 16),
               Text('Color', style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 8),

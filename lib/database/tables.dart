@@ -20,7 +20,7 @@ class LinkTable extends Table {
 class CategoryTable extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
-  IntColumn get icon => integer().nullable()();
+  TextColumn get icon => text().nullable()();
   TextColumn get color => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 

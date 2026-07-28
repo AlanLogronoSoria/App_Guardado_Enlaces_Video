@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,9 @@ import '../../shared/providers/core_providers.dart';
 import '../../shared/providers/backup_providers.dart';
 import '../../shared/providers/link_providers.dart';
 import '../../shared/providers/category_providers.dart';
+import '../../shared/providers/cloud_backup_providers.dart';
+import '../../core/services/cloud/cloud_backup_provider.dart';
+import '../../core/services/cloud/onedrive_backup_provider.dart';
 
 class BackupsScreen extends ConsumerStatefulWidget {
   const BackupsScreen({super.key});
@@ -23,6 +27,7 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
   Widget build(BuildContext context) {
     final statusAsync = ref.watch(backupStatusProvider);
     final countsAsync = ref.watch(backupCountsProvider);
+    final isCloudAuth = ref.watch(cloudAuthStateProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -35,7 +40,297 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
           _buildCountsCard(context, countsAsync, colorScheme),
           const SizedBox(height: 16),
           _buildActionsCard(context, colorScheme),
+          const SizedBox(height: 16),
+          _buildOneDriveCard(context, isCloudAuth, colorScheme),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOneDriveCard(
+      BuildContext context, bool isAuth, ColorScheme colorScheme) {
+    final provider = ref.watch(onedriveProvider);
+    final email = provider.accountEmail;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.cloud, color: isAuth ? Colors.blue : colorScheme.onSurfaceVariant, size: 22),
+                const SizedBox(width: 10),
+                Text('OneDrive',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (!isAuth) ...[
+              Text('Estado: No conectado',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant)),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _startOneDriveAuth(context, provider),
+                  icon: const Icon(Icons.login),
+                  label: const Text('Iniciar sesión con Microsoft'),
+                ),
+              ),
+            ] else ...[
+              if (email != null) ...[
+                Text('Cuenta: $email',
+                    style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(height: 4),
+              ],
+              Text('Estado: Conectado',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.green, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                FilledButton.icon(
+                  onPressed: () => _cloudBackup(context, provider),
+                  icon: const Icon(Icons.cloud_upload, size: 18),
+                  label: const Text('Crear Backup'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _cloudRestore(context, provider),
+                  icon: const Icon(Icons.cloud_download, size: 18),
+                  label: const Text('Restaurar'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _showCloudFiles(context, provider),
+                  icon: const Icon(Icons.list, size: 18),
+                  label: const Text('Ver Copias'),
+                ),
+                TextButton.icon(
+                  onPressed: () async {
+                    await provider.logout();
+                    ref.read(cloudAuthStateProvider.notifier).state = false;
+                    setState(() {});
+                  },
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: const Text('Cerrar sesión'),
+                ),
+              ]),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _startOneDriveAuth(
+      BuildContext context, OneDriveBackupProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Iniciar sesión'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Se abrirá una página de Microsoft.'),
+            SizedBox(height: 8),
+            Text('Ingresa el código que aparece en pantalla '
+                'para vincular tu cuenta.',
+                style: TextStyle(fontSize: 13)),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              provider.setOnShowCode((uri, code) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Vincular cuenta'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('1. Abre este enlace:'),
+                        const SizedBox(height: 4),
+                        SelectableText(uri,
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.blue)),
+                        const SizedBox(height: 12),
+                        const Text('2. Ingresa este código:'),
+                        const SizedBox(height: 4),
+                        SelectableText(code,
+                            style: const TextStyle(
+                                fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 4)),
+                        const SizedBox(height: 12),
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 8),
+                        const Text('Esperando autorización...',
+                            style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Cancelar'),
+                      ),
+                    ],
+                  ),
+                );
+              });
+
+              final success = await provider.login();
+              if (ctx.mounted) Navigator.of(ctx).pop();
+
+              if (success && context.mounted) {
+                ref.read(cloudAuthStateProvider.notifier).state = true;
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Sesión iniciada correctamente'),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('No se pudo iniciar sesión'),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cloudBackup(
+      BuildContext context, CloudBackupProvider provider) async {
+    final exporter = ref.read(databaseExporterProvider);
+    final json = await exporter.exportDatabase();
+    final bytes = utf8.encode(json);
+    final fileName =
+        'backup_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.json';
+
+    try {
+      await provider.uploadBackup(fileName, bytes);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Backup realizado correctamente'),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _cloudRestore(
+      BuildContext context, CloudBackupProvider provider) async {
+    final files = await provider.listBackups();
+    if (!context.mounted) return;
+
+    if (files.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay backups disponibles')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Seleccionar backup'),
+        children: files.map((f) => ListTile(
+              title: Text(f.name),
+              subtitle: Text(
+                  '${(f.sizeBytes / 1024).toStringAsFixed(0)} KB — ${DateFormat('dd/MM/yy').format(f.createdAt)}'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                try {
+                  final bytes = await provider.downloadBackup(f.name);
+                  final json = utf8.decode(bytes);
+                  final importer = ref.read(databaseImporterProvider);
+                  await importer.restoreDatabase(json);
+                  ref.invalidate(allLinksProvider);
+                  ref.invalidate(allCategoriesProvider);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Backup restaurado correctamente'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                    );
+                  }
+                }
+              },
+            )).toList(),
+      ),
+    );
+  }
+
+  void _showCloudFiles(
+      BuildContext context, CloudBackupProvider provider) async {
+    final files = await provider.listBackups();
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Copias en OneDrive'),
+        children: files.isEmpty
+            ? [const Padding(padding: EdgeInsets.all(16), child: Text('No hay copias'))]
+            : files.map((f) => ListTile(
+                  title: Text(f.name),
+                  subtitle: Text(
+                      '${(f.sizeBytes / 1024).toStringAsFixed(0)} KB — ${DateFormat('dd/MM/yy').format(f.createdAt)}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    onPressed: () async {
+                      await provider.deleteBackup(f.name);
+                      Navigator.pop(ctx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${f.name} eliminado'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                )).toList(),
       ),
     );
   }

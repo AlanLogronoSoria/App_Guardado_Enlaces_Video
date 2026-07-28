@@ -22,11 +22,9 @@ class CategoryRepository {
   }
 
   Future<CategoryModel> createCategory(String name,
-      {int? icon, String? color}) async {
+      {String? icon, String? color}) async {
     final existing = await _db.getCategoryByName(name);
-    if (existing != null) {
-      return _toModel(existing);
-    }
+    if (existing != null) return _toModel(existing);
 
     final now = DateTime.now();
     final id = _uuid.v4();
@@ -56,7 +54,7 @@ class CategoryRepository {
   }
 
   Future<void> updateCategory(String id,
-      {String? name, int? icon, String? color}) async {
+      {String? name, String? icon, String? color}) async {
     final cat = await _db.getCategoryById(id);
     if (cat == null) return;
 
@@ -64,13 +62,12 @@ class CategoryRepository {
       await _db.renameCategoryForLinks(cat.name, name);
     }
 
-    await (_db.update(_db.categoryTable)..where((t) => t.id.equals(id))).write(
-      CategoryTableCompanion(
-        name: name != null ? Value(name) : const Value.absent(),
-        icon: Value.absentIfNull(icon),
-        color: Value.absentIfNull(color),
-      ),
-    );
+    await (_db.update(_db.categoryTable)..where((t) => t.id.equals(id)))
+        .write(CategoryTableCompanion(
+      name: name != null ? Value(name) : const Value.absent(),
+      icon: Value.absentIfNull(icon),
+      color: Value.absentIfNull(color),
+    ));
     _db.incrementModifications();
   }
 
