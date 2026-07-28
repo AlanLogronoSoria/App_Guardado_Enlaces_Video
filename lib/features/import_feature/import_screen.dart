@@ -109,7 +109,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                 Text('Pega tus enlaces aquí',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
                 const SizedBox(height: 4),
-                Text('Copia y pega varios enlaces desde\nWhatsApp, Telegram, Notas o cualquier aplicación.',
+                Text('Copia y pega varios enlaces desde\nWhatsApp, Notas o cualquier aplicación.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant.withAlpha(160))),
                 const SizedBox(height: 20),
@@ -151,7 +151,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                   Text('Formato soportado', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                 ]),
                 const SizedBox(height: 10),
-                Text('• Enlaces separados por líneas\n• Enlaces separados por comas\n• Grupos completos copiados desde WhatsApp\n• Listas de Telegram\n• Enlaces mezclados con texto',
+                Text('• Enlaces separados por líneas\n• Enlaces separados por comas\n• Grupos completos copiados desde WhatsApp\n• Enlaces mezclados con texto',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant, height: 1.6)),
                 const SizedBox(height: 10),
                 Container(
